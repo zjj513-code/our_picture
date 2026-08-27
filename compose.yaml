@@ -1,0 +1,21 @@
+services:
+  mysql:
+    image: mysql:8.4
+    environment:
+      MYSQL_ROOT_PASSWORD: local_root_password
+      MYSQL_DATABASE: our_pictures
+      MYSQL_USER: our_pictures
+      MYSQL_PASSWORD: local_dev_password
+    ports:
+      - "127.0.0.1:3307:3306"
+    volumes:
+      - our-pictures-mysql:/var/lib/mysql
+      - ./database/docker-init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-plocal_root_password"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+
+volumes:
+  our-pictures-mysql:
