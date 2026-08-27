@@ -1,8 +1,18 @@
 # Our Pictures
 
-A restrained, book-like film photography archive for two people. Phase 2 keeps the approved public experience intact while adding MySQL persistence and a minimal private admin.
+A restrained, book-like film photography archive for two people. The current
+Phase 2 implementation keeps the approved public experience intact while adding
+MySQL persistence and a minimal private admin.
 
-## Phase 2 architecture
+## Documentation
+
+- [`SPEC.md`](SPEC.md) defines the frozen product boundaries.
+- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) separates the implemented Phase
+  2 architecture from the approved, not-yet-implemented Phase 3 AWS target.
+- [`docs/decisions`](docs/decisions) records accepted architectural decisions
+  that require a superseding decision before they are reversed.
+
+## Current architecture: Phase 2
 
 - **Next.js App Router + TypeScript** server-renders the public feed and all admin pages. The initial public Moment feed does not use client-side API fetching.
 - **Drizzle ORM + MySQL 8.4** store Moments, Photo metadata, two admin accounts, and hashed-token sessions.
@@ -12,6 +22,18 @@ A restrained, book-like film photography archive for two people. Phase 2 keeps t
 - **Local responsive images** remain development and seed assets. Removing Photo records never deletes files in `public/photos`.
 
 The former Cloudflare/vinext wrapper was replaced by standard Next.js Node runtime because direct MySQL connections and native Argon2id are required. The App Router, React components, Tailwind setup, Drizzle schema, and frozen public rendering remain in place.
+
+## Target architecture: Phase 3, not implemented
+
+Phase 3 will add direct browser uploads to private Amazon S3 storage in
+`ap-northeast-1` (Tokyo), asynchronous image processing with AWS Lambda, a
+separate private bucket for web derivatives, and public derivative delivery
+through Amazon CloudFront with Origin Access Control.
+
+Original film scans will never be public. The browser will receive only
+short-lived upload URLs, not permanent AWS credentials. The detailed target,
+failure model, object-key policy, and implementation phases are documented in
+[`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 
 ## Local setup
 
@@ -102,4 +124,7 @@ The integration suite migrates and resets only the dedicated `_test` database. I
 
 ## Deferred to Phase 3
 
-Tencent COS, real uploads, image processing, Sharp, CDN configuration, deployment, and object deletion are intentionally not implemented. EXIF, GPS, camera/scanner metadata, albums, tags, search, likes, comments, analytics, and social features remain out of scope.
+Amazon S3 uploads, AWS Lambda image processing, Amazon CloudFront delivery,
+remote-object deletion, and production deployment are intentionally not
+implemented yet. EXIF, GPS, camera/scanner metadata, albums, tags, search,
+likes, comments, analytics, and social features remain out of scope.
