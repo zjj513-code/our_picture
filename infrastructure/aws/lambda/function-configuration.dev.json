@@ -1,0 +1,16 @@
+{
+  "FunctionName": "our-pictures-dev-image-processor",
+  "Description": "Phase 3C idempotent image processor for private originals and web derivatives",
+  "Timeout": 120,
+  "MemorySize": 1536,
+  "Environment": {
+    "Variables": {
+      "ORIGINALS_BUCKET": "our-pictures-dev-066899195278-originals",
+      "WEB_BUCKET": "our-pictures-dev-066899195278-web",
+      "MAX_SOURCE_BYTES": "262144000"
+    }
+  },
+  "EphemeralStorage": {
+    "Size": 1024
+  }
+}

@@ -24,6 +24,7 @@ import {
   markPhotoProcessing,
   resetPhotoUpload,
 } from "@/database/photo-uploads";
+import { applyProcessingResult } from "@/database/photo-processing";
 import { seedDevelopmentData } from "@/database/seed";
 import { developmentSeedMoments } from "@/database/seed-data";
 import { adminSessions, adminUsers, moments, photos } from "@/database/schema";
@@ -56,7 +57,7 @@ try {
   await verifyRepositoryCrud();
   await verifyHttpFlows(admin.username, password);
 
-  console.log("✓ Phase 3B database, authentication, upload-state, admin, and public checks passed.");
+  console.log("✓ Phase 3C database, authentication, upload-state, reconciliation, admin, and public checks passed.");
 } finally {
   stopServer();
   await client.pool.end();
@@ -222,6 +223,32 @@ async function verifyRepositoryCrud() {
   await markPhotoFailed(uploadMomentId, uploadPhotoId, "processor failed", client.db);
   assert.equal(await resetPhotoUpload(uploadMomentId, uploadPhotoId, client.db), true);
   assert.equal((await getPhotoUpload(uploadMomentId, uploadPhotoId, client.db))?.status, "pending");
+  const pendingPhoto = await getPhotoUpload(uploadMomentId, uploadPhotoId, client.db);
+  assert.ok(pendingPhoto);
+  await applyProcessingResult(pendingPhoto, {
+    schemaVersion: 1,
+    momentId: uploadMomentId,
+    photoId: uploadPhotoId,
+    sourceKey: pendingPhoto.originalKey,
+    sourceVersionId: null,
+    sourceEtag: "test-etag",
+    checksumSha256: pendingPhoto.checksum!,
+    sequencer: "001",
+    processedAt: new Date().toISOString(),
+    status: "ready",
+    webKey: pendingPhoto.webKey,
+    thumbnailKey: pendingPhoto.thumbnailKey!,
+    width: 1536,
+    height: 1024,
+    thumbnailWidth: 768,
+    thumbnailHeight: 512,
+  }, client.db);
+  assert.deepEqual(
+    (({ status, width, height }) => ({ status, width, height }))(
+      (await getPhotoUpload(uploadMomentId, uploadPhotoId, client.db))!,
+    ),
+    { status: "ready", width: 1536, height: 1024 },
+  );
   await deleteMoment(uploadMomentId, client.db);
 }
 
@@ -317,6 +344,14 @@ async function verifyHttpFlows(username: string, password: string) {
     redirect: "manual",
   });
   assert.equal(crossOriginUpload.status, 403);
+
+  const reconciled = await fetch(`${origin}/admin/moments/${createdId}/photos/reconcile`, {
+    method: "POST",
+    headers: { cookie, origin, "content-type": "application/json" },
+    body: "{}",
+  });
+  assert.equal(reconciled.status, 200);
+  assert.deepEqual(await reconciled.json(), { photos: [] });
 
   const httpPhotoIds = ["http-photo-a", "http-photo-b", "http-photo-c"];
   await client.db.insert(photos).values(

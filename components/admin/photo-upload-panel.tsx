@@ -9,6 +9,7 @@ type UploadStatus =
   | "uploading"
   | "verifying"
   | "processing"
+  | "ready"
   | "failed";
 
 type SignedUpload = {
@@ -112,7 +113,13 @@ export function PhotoUploadPanel({ momentId }: { momentId: string }) {
           patchItem(item.clientId, { status: "failed", error: "Upload initialization returned no result." });
         }
       }
-      await runWithConcurrency(ready, 3, uploadAndComplete);
+      const processingItems: Array<{ photoId: string; clientId: string }> = [];
+      await runWithConcurrency(ready, 3, async (item) => {
+        if (await uploadAndComplete(item)) {
+          processingItems.push({ photoId: item.photoId!, clientId: item.clientId });
+        }
+      });
+      if (processingItems.length > 0) await waitForProcessing(processingItems);
     } catch (error) {
       const message = errorMessage(error);
       setBatchError(message);
@@ -128,7 +135,7 @@ export function PhotoUploadPanel({ momentId }: { momentId: string }) {
   };
 
   const uploadAndComplete = async (item: UploadItem) => {
-    if (!item.photoId || !item.upload) return;
+    if (!item.photoId || !item.upload) return false;
     try {
       patchItem(item.clientId, { status: "uploading", progress: 0, error: undefined });
       await putFile(item.file, item.upload, (progress) => patchItem(item.clientId, { progress }));
@@ -139,8 +146,32 @@ export function PhotoUploadPanel({ momentId }: { momentId: string }) {
       );
       patchItem(item.clientId, { status: "processing", progress: 100 });
       router.refresh();
+      return true;
     } catch (error) {
       patchItem(item.clientId, { status: "failed", error: errorMessage(error) });
+      return false;
+    }
+  };
+
+  const waitForProcessing = async (entries: Array<{ photoId: string; clientId: string }>) => {
+    const waiting = new Map(entries.map((entry) => [entry.photoId, entry.clientId]));
+    for (let attempt = 0; attempt < 45 && waiting.size > 0; attempt += 1) {
+      if (attempt > 0) await delay(2_000);
+      const result = await requestJson<{
+        photos: Array<{ photoId: string; status: "pending" | "processing" | "ready" | "failed"; error?: string }>;
+      }>(`/admin/moments/${momentId}/photos/reconcile`, {});
+      for (const photo of result.photos) {
+        const clientId = waiting.get(photo.photoId);
+        if (!clientId) continue;
+        if (photo.status === "ready") {
+          patchItem(clientId, { status: "ready", progress: 100, error: undefined });
+          waiting.delete(photo.photoId);
+        } else if (photo.status === "failed") {
+          patchItem(clientId, { status: "failed", error: photo.error ?? "Image processing failed." });
+          waiting.delete(photo.photoId);
+        }
+      }
+      router.refresh();
     }
   };
 
@@ -183,7 +214,9 @@ export function PhotoUploadPanel({ momentId }: { momentId: string }) {
       }
       const prepared = { ...item, photoId, upload };
       patchItem(item.clientId, { photoId, upload });
-      await uploadAndComplete(prepared);
+      if (await uploadAndComplete(prepared)) {
+        await waitForProcessing([{ photoId, clientId: item.clientId }]);
+      }
     } catch (error) {
       patchItem(item.clientId, { status: "failed", error: errorMessage(error) });
     } finally {
@@ -299,6 +332,7 @@ async function runWithConcurrency<T>(items: T[], limit: number, worker: (item: T
 function statusLabel(item: UploadItem) {
   if (item.status === "uploading") return `uploading ${item.progress}%`;
   if (item.status === "processing") return "uploaded · awaiting processing";
+  if (item.status === "ready") return "ready";
   return item.status;
 }
 
@@ -309,4 +343,8 @@ function formatBytes(bytes: number) {
 
 function errorMessage(error: unknown) {
   return error instanceof Error ? error.message : "Upload failed.";
+}
+
+function delay(milliseconds: number) {
+  return new Promise((resolve) => setTimeout(resolve, milliseconds));
 }

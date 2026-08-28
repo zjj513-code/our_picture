@@ -1,21 +1,27 @@
-# Our Pictures Phase 3A infrastructure
+# Our Pictures Phase 3 infrastructure
 
 This directory contains the auditable configuration used to create the
 development S3, Lambda, and CloudFront resources described in
 `docs/ARCHITECTURE.md`.
 
-## Current Phase 3A boundary
+## Current Phase 3C boundary
 
 - Regional resources use `ap-northeast-1` (Tokyo).
 - Both S3 buckets are private, use S3-managed encryption, enforce bucket-owner
   object ownership, and keep Block Public Access enabled.
 - CloudFront reads only from the private web bucket through an Origin Access
   Control (OAC) that always signs origin requests.
-- The Lambda function initially contains a Phase 3A placeholder handler. Real
-  image validation and derivative generation remain Phase 3C work.
-- The originals bucket notification is not applied while the placeholder is
-  deployed. This prevents an upload event from being acknowledged before real
-  processing exists.
+- The Lambda package validates the signed source metadata and decoded image,
+  generates 1536px and 768px WebP derivatives, and writes a private processing
+  result for application reconciliation.
+- The processor is deterministic and treats an existing matching ready result
+  as a duplicate event rather than creating additional outputs.
+- The processor package and configuration are deployed in development. Manual
+  invocation, duplicate-event handling, result reconciliation, and CloudFront
+  delivery have been verified with real uploaded originals.
+- Automatic S3 invocation is enabled for ObjectCreated events under the
+  `originals/` prefix. A browser upload has been verified through automatic
+  processing, application reconciliation, and CloudFront delivery.
 
 ## Fixed resources
 
@@ -30,10 +36,28 @@ development S3, Lambda, and CloudFront resources described in
 The generated CloudFront distribution ID, domain, and OAC ID are recorded in
 `state/dev.json` after deployment. They are resource identifiers, not secrets.
 
-## Event activation gate
+## Processor package and deployment
 
-Before enabling `s3/originals-notification.json`, replace the placeholder
-Lambda code with the idempotent Phase 3C processor and add the narrowly scoped
-S3 invoke permission documented in `infrastructure/iam/README.md`. The
-notification filters events to the `originals/` prefix so private processing
-result writes cannot recursively invoke the function.
+Build the Linux arm64 package from the repository root:
+
+```sh
+./scripts/package-image-processor.sh /tmp/our-pictures-image-processor.zip
+```
+
+Deploy the package and checked-in configuration with the maintenance profile:
+
+```sh
+AWS_PROFILE=our-pictures-dev AWS_REGION=ap-northeast-1 \
+  aws lambda update-function-code \
+  --function-name our-pictures-dev-image-processor \
+  --zip-file fileb:///tmp/our-pictures-image-processor.zip
+
+AWS_PROFILE=our-pictures-dev AWS_REGION=ap-northeast-1 \
+  aws lambda update-function-configuration \
+  --cli-input-json file://infrastructure/aws/lambda/function-configuration.dev.json
+```
+
+The S3 invoke permission is the one separately administered statement documented
+in `infrastructure/iam/README.md`. The active notification matches
+`s3/originals-notification.json` and filters events to the `originals/` prefix,
+so `processing-results/` writes cannot recursively invoke the function.

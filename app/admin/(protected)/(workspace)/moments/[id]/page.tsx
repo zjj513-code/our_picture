@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getMomentById } from "@/database/moments";
+import { reconcileMomentProcessingResults } from "@/database/photo-processing";
 import { MomentForm } from "@/components/admin/moment-form";
 import { PhotoOrderEditor } from "@/components/admin/photo-order-editor";
 import { PhotoUploadPanel } from "@/components/admin/photo-upload-panel";
@@ -21,6 +22,7 @@ export default async function EditMomentPage({ params, searchParams }: EditMomen
   } catch {
     notFound();
   }
+  await reconcileMomentProcessingResults(id);
   const moment = await getMomentById(id);
   if (!moment) notFound();
   const { error, notice } = await searchParams;

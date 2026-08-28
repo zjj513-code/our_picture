@@ -11,6 +11,8 @@
   "cloudFrontDistributionId": "E27LBWNJWHPBCQ",
   "cloudFrontDomainName": "d1v1mg445zdh54.cloudfront.net",
   "cloudFrontStatus": "Deployed",
-  "s3NotificationEnabled": false,
-  "processorImplementation": "phase3a-placeholder"
+  "s3NotificationEnabled": true,
+  "s3NotificationId": "ProcessOurPicturesOriginals",
+  "lambdaInvokePermissionStatementId": "AllowOurPicturesOriginalsBucket",
+  "processorImplementation": "phase3c-idempotent-image-processor"
 }

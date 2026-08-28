@@ -3,13 +3,13 @@
 ## Document status
 
 This document distinguishes the architecture that exists today from the
-approved target for the remaining Phase 3 work.
+approved target for the remaining Phase 3D work.
 
 - **Current** means implemented and testable in this repository.
 - **Target** means approved direction that has not yet been implemented.
 
-Nothing in the target sections should be read as a claim that an AWS resource
-already exists.
+Nothing in the target sections should be read as a claim that the remaining
+recovery, deletion, or production resources already exist.
 
 ## Architectural goals
 
@@ -25,7 +25,7 @@ already exists.
 Product requirements and non-goals are defined in [`SPEC.md`](../SPEC.md).
 Accepted infrastructure decisions are recorded in [`docs/decisions`](decisions).
 
-## Current architecture: Phase 3B
+## Current architecture: Phase 3C
 
 The current application is a single Next.js App Router project using the Node.js
 runtime.
@@ -39,11 +39,21 @@ Next.js application
    |-- private admin pages and Route Handlers
    |-- server-side session authentication
    |-- presigned S3 upload initialization and completion verification
+   |-- private processing-result reconciliation
    |
    v
 MySQL 8.4
 
 Administrator browser -- direct PUT --> private originals S3 bucket
+                                           |
+                                           v
+                                    image-processing Lambda
+                                      |              |
+                                      v              v
+                              private web S3   private result prefix
+                                      |
+                                      v
+                               CloudFront with OAC
 
 Development and seed Photos
    |
@@ -62,29 +72,37 @@ Current characteristics:
   TIFF originals, with three concurrent direct S3 PUTs and per-file retry.
 - The application verifies S3 size, media type, and SHA-256 before changing a
   Photo from `pending` to `processing`.
-- There is no image processor implementation, processing-result reconciliation,
-  stale-job recovery, or remote-object deletion workflow.
+- S3 ObjectCreated events under `originals/` invoke an idempotent Lambda that
+  validates and decodes the source, generates deterministic WebP derivatives,
+  and writes a private result.
+- The admin flow polls reconciliation through the application; matching results
+  advance the Photo to `ready` or `failed` and store processed dimensions and time.
+- CloudFront serves only the private web-bucket derivatives through OAC.
+- There is no stale-job recovery or remote-object deletion workflow yet.
 - Removing a current Photo record does not delete a local image file.
 
-## Current AWS infrastructure: Phase 3A
+## Current AWS infrastructure: Phase 3C
 
-The development AWS foundation is provisioned. Phase 3B connects the application
-only to the private originals bucket:
+The development AWS path is provisioned and connected end to end:
 
 - private originals bucket `our-pictures-dev-066899195278-originals`;
 - private web bucket `our-pictures-dev-066899195278-web`;
 - CloudFront distribution `E27LBWNJWHPBCQ` using OAC `E2FOX0AAG8GTZM`;
 - Lambda function `our-pictures-dev-image-processor` using the dedicated
   execution role and a 14-day CloudWatch Logs retention policy.
+- S3 ObjectCreated notification `ProcessOurPicturesOriginals`, filtered to the
+  `originals/` prefix;
+- Lambda resource-policy statement `AllowOurPicturesOriginalsBucket`, limited
+  to account `066899195278` and that exact originals bucket.
 
-The Lambda deployment is a Phase 3A placeholder. The originals bucket has no
-event notification, so uploads cannot be acknowledged by incomplete processor
-code. Non-secret deployment identifiers are recorded in
+The deployed Node.js 24 arm64 package is the Phase 3C image processor. Automatic
+browser upload through reconciliation and CloudFront delivery has been verified
+with a real development object. Non-secret deployment identifiers are recorded in
 [`infrastructure/aws/state/dev.json`](../infrastructure/aws/state/dev.json).
 
-## Target end-to-end architecture: Phase 3C–3D, not implemented
+## Current end-to-end architecture: Phase 3C
 
-The target storage and delivery path is:
+The implemented storage and delivery path is:
 
 ```text
 Administrator browser
@@ -193,6 +211,13 @@ CloudFront:
 - redirect viewers to HTTPS;
 - never expose or route to the originals bucket.
 
+## Remaining Phase 3D target, not implemented
+
+- provide explicit retry and recovery controls for failed or stale processing;
+- define and implement remote-object deletion with retention and recovery rules;
+- validate representative batches of 10, 20, and 30 film scans;
+- add the production monitoring and operational runbook needed before launch.
+
 ## Upload and processing lifecycle
 
 Durable Photo processing states are:
@@ -213,9 +238,9 @@ percentage, but these are not durable database states.
 4. **Implemented in Phase 3B:** the browser reports success to the application, which verifies the stored object and advances the Photo to
    `processing`. Reconciliation must also recover if the browser closes before
    this callback.
-5. **Target Phase 3C:** S3 invokes the processor asynchronously.
-6. **Target Phase 3C:** Lambda writes derivatives and a processing result.
-7. **Target Phase 3C:** the application reconciles the result, records dimensions and metadata, and
+5. **Implemented in Phase 3C:** S3 invokes the processor asynchronously.
+6. **Implemented in Phase 3C:** Lambda writes derivatives and a processing result.
+7. **Implemented in Phase 3C:** the application reconciles the result, records dimensions and metadata, and
    sets the Photo to `ready` or `failed`.
 8. **Implemented in Phase 3B:** only `ready` Photos are eligible for public queries and publication.
 
@@ -251,14 +276,14 @@ public URL is derived at runtime:
 PHOTO_CDN_BASE_URL + "/" + webKey
 ```
 
-Phase 2 seed rows currently use local `/photos/...` paths. Phase 3 must introduce
-one URL resolver that supports those explicit local seed paths while resolving
-production object keys through the configured delivery base URL.
+Phase 2 seed rows use local `/photos/...` paths. The current URL resolver supports
+those explicit local seed paths while resolving uploaded object keys through the
+configured delivery base URL.
 
-## Planned data-model evolution
+## Current data model
 
 The existing Moment-to-Photos relationship and ordered `sortOrder` constraint
-remain valid. Phase 3 is expected to extend Photo metadata with fields such as:
+remain valid. Phase 3 extends Photo metadata with:
 
 ```text
 originalFilename
@@ -271,9 +296,8 @@ processedAt
 ```
 
 Image dimensions are not reliably available before an uploaded film scan is
-decoded. The current non-null `width` and `height` fields must therefore either
-become nullable until processing succeeds or be replaced by clearly named
-processed-derivative dimensions.
+decoded. `width` and `height` are nullable until successful processing writes
+the display-derivative dimensions.
 
 Publishing rules must be enforced in application logic and covered by
 integration tests:
@@ -316,7 +340,7 @@ integration tests:
 
 ## Configuration contract
 
-Phase 3B consumes this configuration:
+Phase 3C consumes this configuration:
 
 ```text
 AWS_REGION=ap-northeast-1
@@ -344,15 +368,16 @@ burden.
 ## Phased delivery
 
 ```text
-Phase 2    Current MySQL and private-admin baseline
+Phase 2    MySQL and private-admin baseline
 Phase 2.5  Product, architecture, and decision documentation
-Phase 3A   Current S3, IAM, CloudFront, and processor placeholder infrastructure
-Phase 3B   Current authenticated direct batch upload
-Phase 3C   Idempotent image processing and status reconciliation
+Phase 3A   S3, IAM, CloudFront, and processor placeholder infrastructure
+Phase 3B   Authenticated direct batch upload
+Phase 3C   Current idempotent image processing and status reconciliation
 Phase 3D   Retry, deletion, recovery, and real-workflow validation
 Phase 4    Production compute, database, domain, backups, and monitoring
 ```
 
-Phase 3B has a verified single-file real AWS path. Full Phase 3 acceptance must
-still include real batches of 10, 20, and 30 representative film scans, not only
-small JPEG fixtures.
+Phase 3C has a verified single-file automatic AWS path from browser upload to
+database `ready` state and CloudFront display. Full Phase 3 acceptance must still
+include real batches of 10, 20, and 30 representative film scans, not only small
+JPEG fixtures.

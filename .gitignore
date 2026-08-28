@@ -2,6 +2,7 @@
 
 # dependencies
 /node_modules
+/infrastructure/aws/lambda/node_modules/
 /.pnp
 .pnp.*
 .yarn/*
