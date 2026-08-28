@@ -1,0 +1,226 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "CreateOnlyTheTwoTokyoDevelopmentBuckets",
+      "Effect": "Allow",
+      "Action": "s3:CreateBucket",
+      "Resource": [
+        "arn:aws:s3:::our-pictures-dev-066899195278-originals",
+        "arn:aws:s3:::our-pictures-dev-066899195278-web"
+      ],
+      "Condition": {
+        "StringEquals": {
+          "s3:locationconstraint": "ap-northeast-1",
+          "s3:x-amz-object-ownership": "BucketOwnerEnforced"
+        }
+      }
+    },
+    {
+      "Sid": "ConfigureOnlyTheTwoDevelopmentBuckets",
+      "Effect": "Allow",
+      "Action": [
+        "s3:GetBucketLocation",
+        "s3:GetBucketOwnershipControls",
+        "s3:GetBucketPolicy",
+        "s3:GetBucketPublicAccessBlock",
+        "s3:GetBucketTagging",
+        "s3:GetBucketVersioning",
+        "s3:GetEncryptionConfiguration",
+        "s3:ListBucket",
+        "s3:PutBucketOwnershipControls",
+        "s3:PutBucketPolicy",
+        "s3:PutBucketPublicAccessBlock",
+        "s3:PutBucketTagging",
+        "s3:PutEncryptionConfiguration"
+      ],
+      "Resource": [
+        "arn:aws:s3:::our-pictures-dev-066899195278-originals",
+        "arn:aws:s3:::our-pictures-dev-066899195278-web"
+      ]
+    },
+    {
+      "Sid": "ConfigureOriginalsUploadAndProcessingEvents",
+      "Effect": "Allow",
+      "Action": [
+        "s3:GetBucketCORS",
+        "s3:GetBucketNotification",
+        "s3:PutBucketCORS",
+        "s3:PutBucketNotification"
+      ],
+      "Resource": "arn:aws:s3:::our-pictures-dev-066899195278-originals"
+    },
+    {
+      "Sid": "CreateAndManageOnlyTheImageProcessor",
+      "Effect": "Allow",
+      "Action": [
+        "lambda:GetFunction",
+        "lambda:GetFunctionConcurrency",
+        "lambda:GetFunctionConfiguration",
+        "lambda:GetPolicy",
+        "lambda:InvokeFunction",
+        "lambda:ListTags",
+        "lambda:PutFunctionConcurrency",
+        "lambda:UpdateFunctionCode",
+        "lambda:UpdateFunctionConfiguration"
+      ],
+      "Resource": "arn:aws:lambda:ap-northeast-1:066899195278:function:our-pictures-dev-image-processor"
+    },
+    {
+      "Sid": "CreateOnlyTheTaggedImageProcessor",
+      "Effect": "Allow",
+      "Action": [
+        "lambda:CreateFunction",
+        "lambda:TagResource"
+      ],
+      "Resource": "arn:aws:lambda:ap-northeast-1:066899195278:function:our-pictures-dev-image-processor",
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestTag/Project": "OurPictures",
+          "aws:RequestTag/Environment": "dev"
+        },
+        "ForAllValues:StringEquals": {
+          "aws:TagKeys": [
+            "Project",
+            "Environment"
+          ]
+        }
+      }
+    },
+    {
+      "Sid": "PreventVpcAttachedImageProcessor",
+      "Effect": "Deny",
+      "Action": [
+        "lambda:CreateFunction",
+        "lambda:UpdateFunctionConfiguration"
+      ],
+      "Resource": "arn:aws:lambda:ap-northeast-1:066899195278:function:our-pictures-dev-image-processor",
+      "Condition": {
+        "Null": {
+          "lambda:VpcIds": "false"
+        }
+      }
+    },
+    {
+      "Sid": "PassOnlyTheProcessorRoleToLambda",
+      "Effect": "Allow",
+      "Action": "iam:PassRole",
+      "Resource": "arn:aws:iam::066899195278:role/OurPicturesDevImageProcessorRole",
+      "Condition": {
+        "StringEquals": {
+          "iam:PassedToService": "lambda.amazonaws.com"
+        }
+      }
+    },
+    {
+      "Sid": "CreateAndConfigureOnlyTheProcessorLogGroup",
+      "Effect": "Allow",
+      "Action": [
+        "logs:CreateLogGroup",
+        "logs:ListTagsForResource",
+        "logs:PutRetentionPolicy",
+        "logs:TagResource"
+      ],
+      "Resource": "arn:aws:logs:ap-northeast-1:066899195278:log-group:/aws/lambda/our-pictures-dev-image-processor"
+    },
+    {
+      "Sid": "ReadLogGroupStateForDeploymentVerification",
+      "Effect": "Allow",
+      "Action": "logs:DescribeLogGroups",
+      "Resource": "*"
+    },
+    {
+      "Sid": "CreateTaggedDevelopmentCloudFrontDistribution",
+      "Effect": "Allow",
+      "Action": [
+        "cloudfront:CreateConnectionGroup",
+        "cloudfront:CreateDistribution"
+      ],
+      "Resource": "*",
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestTag/Project": "OurPictures",
+          "aws:RequestTag/Environment": "dev"
+        },
+        "ForAllValues:StringEquals": {
+          "aws:TagKeys": [
+            "Project",
+            "Environment"
+          ]
+        }
+      }
+    },
+    {
+      "Sid": "TagOnlyNewDevelopmentCloudFrontResources",
+      "Effect": "Allow",
+      "Action": "cloudfront:TagResource",
+      "Resource": [
+        "arn:aws:cloudfront::066899195278:connection-group/*",
+        "arn:aws:cloudfront::066899195278:distribution/*"
+      ],
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestTag/Project": "OurPictures",
+          "aws:RequestTag/Environment": "dev"
+        },
+        "ForAllValues:StringEquals": {
+          "aws:TagKeys": [
+            "Project",
+            "Environment"
+          ]
+        }
+      }
+    },
+    {
+      "Sid": "CreateAndListOriginAccessControl",
+      "Effect": "Allow",
+      "Action": [
+        "cloudfront:CreateOriginAccessControl",
+        "cloudfront:ListOriginAccessControls"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "ReadAccountOriginAccessControls",
+      "Effect": "Allow",
+      "Action": [
+        "cloudfront:GetOriginAccessControl",
+        "cloudfront:GetOriginAccessControlConfig"
+      ],
+      "Resource": "arn:aws:cloudfront::066899195278:origin-access-control/*"
+    },
+    {
+      "Sid": "ManageOnlyTaggedDevelopmentDistributions",
+      "Effect": "Allow",
+      "Action": [
+        "cloudfront:CreateInvalidation",
+        "cloudfront:GetDistribution",
+        "cloudfront:GetDistributionConfig",
+        "cloudfront:ListTagsForResource",
+        "cloudfront:UpdateDistribution"
+      ],
+      "Resource": "arn:aws:cloudfront::066899195278:distribution/*",
+      "Condition": {
+        "StringEquals": {
+          "aws:ResourceTag/Project": "OurPictures",
+          "aws:ResourceTag/Environment": "dev"
+        }
+      }
+    },
+    {
+      "Sid": "DenyRegionalInfrastructureOutsideTokyo",
+      "Effect": "Deny",
+      "Action": [
+        "lambda:*",
+        "logs:*",
+        "s3:*"
+      ],
+      "Resource": "*",
+      "Condition": {
+        "StringNotEquals": {
+          "aws:RequestedRegion": "ap-northeast-1"
+        }
+      }
+    }
+  ]
+}

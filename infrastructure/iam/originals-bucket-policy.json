@@ -1,0 +1,33 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "DenyInsecureTransport",
+      "Effect": "Deny",
+      "Principal": "*",
+      "Action": "s3:*",
+      "Resource": [
+        "arn:aws:s3:::our-pictures-dev-066899195278-originals",
+        "arn:aws:s3:::our-pictures-dev-066899195278-originals/*"
+      ],
+      "Condition": {
+        "Bool": {
+          "aws:SecureTransport": "false"
+        }
+      }
+    },
+    {
+      "Sid": "DenyStalePresignedSourceUploads",
+      "Effect": "Deny",
+      "Principal": "*",
+      "Action": "s3:PutObject",
+      "Resource": "arn:aws:s3:::our-pictures-dev-066899195278-originals/originals/moments/*/photos/*/source.*",
+      "Condition": {
+        "NumericGreaterThan": {
+          "s3:signatureAge": "900000"
+        }
+      }
+    }
+  ]
+}
+

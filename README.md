@@ -35,6 +35,11 @@ short-lived upload URLs, not permanent AWS credentials. The detailed target,
 failure model, object-key policy, and implementation phases are documented in
 [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 
+The development IAM policy set is checked in under
+[`infrastructure/iam`](infrastructure/iam/README.md). These policy documents are
+ready for review but are not evidence that any S3, Lambda, or CloudFront
+resource has been created or that the deployment role has received them.
+
 ## Local setup
 
 Requirements:

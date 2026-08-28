@@ -1,0 +1,58 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "ReadOnlyImmutableOriginalSources",
+      "Effect": "Allow",
+      "Action": [
+        "s3:GetObject",
+        "s3:GetObjectAttributes",
+        "s3:GetObjectVersion",
+        "s3:GetObjectVersionAttributes"
+      ],
+      "Resource": "arn:aws:s3:::our-pictures-dev-066899195278-originals/originals/moments/*/photos/*/source.*"
+    },
+    {
+      "Sid": "ReadAndWritePrivateProcessingResults",
+      "Effect": "Allow",
+      "Action": [
+        "s3:GetObject",
+        "s3:PutObject"
+      ],
+      "Resource": "arn:aws:s3:::our-pictures-dev-066899195278-originals/processing-results/*.json"
+    },
+    {
+      "Sid": "WriteOnlyDeterministicWebDerivatives",
+      "Effect": "Allow",
+      "Action": "s3:PutObject",
+      "Resource": [
+        "arn:aws:s3:::our-pictures-dev-066899195278-web/moments/*/photos/*/display.webp",
+        "arn:aws:s3:::our-pictures-dev-066899195278-web/moments/*/photos/*/thumbnail.webp"
+      ]
+    },
+    {
+      "Sid": "WriteOnlyTheProcessorLogStream",
+      "Effect": "Allow",
+      "Action": [
+        "logs:CreateLogStream",
+        "logs:PutLogEvents"
+      ],
+      "Resource": "arn:aws:logs:ap-northeast-1:066899195278:log-group:/aws/lambda/our-pictures-dev-image-processor:*"
+    },
+    {
+      "Sid": "DenyRegionalCallsOutsideTokyo",
+      "Effect": "Deny",
+      "Action": [
+        "logs:*",
+        "s3:*"
+      ],
+      "Resource": "*",
+      "Condition": {
+        "StringNotEquals": {
+          "aws:RequestedRegion": "ap-northeast-1"
+        }
+      }
+    }
+  ]
+}
+
