@@ -1,0 +1,79 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "CreatePresignedUploadsOnlyForImmutableSourceKeys",
+      "Effect": "Allow",
+      "Action": "s3:PutObject",
+      "Resource": "arn:aws:s3:::our-pictures-dev-066899195278-originals/originals/moments/*/photos/*/source.*"
+    },
+    {
+      "Sid": "VerifyUploadedSourceObjects",
+      "Effect": "Allow",
+      "Action": [
+        "s3:GetObject",
+        "s3:GetObjectAttributes",
+        "s3:GetObjectVersion",
+        "s3:GetObjectVersionAttributes"
+      ],
+      "Resource": "arn:aws:s3:::our-pictures-dev-066899195278-originals/originals/moments/*/photos/*/source.*"
+    },
+    {
+      "Sid": "ListOnlyPrivateProcessingResults",
+      "Effect": "Allow",
+      "Action": "s3:ListBucket",
+      "Resource": "arn:aws:s3:::our-pictures-dev-066899195278-originals",
+      "Condition": {
+        "StringLike": {
+          "s3:prefix": [
+            "processing-results",
+            "processing-results/*"
+          ]
+        }
+      }
+    },
+    {
+      "Sid": "ReadOnlyPrivateProcessingResults",
+      "Effect": "Allow",
+      "Action": "s3:GetObject",
+      "Resource": "arn:aws:s3:::our-pictures-dev-066899195278-originals/processing-results/*.json"
+    },
+    {
+      "Sid": "ReadOnlyHostingBootstrapParameters",
+      "Effect": "Allow",
+      "Action": "ssm:GetParameter",
+      "Resource": "arn:aws:ssm:ap-northeast-1:066899195278:parameter/our-pictures/dev/hosting/*"
+    },
+    {
+      "Sid": "AuthenticateToEcr",
+      "Effect": "Allow",
+      "Action": "ecr:GetAuthorizationToken",
+      "Resource": "*"
+    },
+    {
+      "Sid": "PullOnlyTheWebImage",
+      "Effect": "Allow",
+      "Action": [
+        "ecr:BatchCheckLayerAvailability",
+        "ecr:BatchGetImage",
+        "ecr:GetDownloadUrlForLayer"
+      ],
+      "Resource": "arn:aws:ecr:ap-northeast-1:066899195278:repository/our-pictures-dev-web"
+    },
+    {
+      "Sid": "DenyRegionalRuntimeCallsOutsideTokyo",
+      "Effect": "Deny",
+      "Action": [
+        "ecr:*",
+        "s3:*",
+        "ssm:*"
+      ],
+      "Resource": "*",
+      "Condition": {
+        "StringNotEquals": {
+          "aws:RequestedRegion": "ap-northeast-1"
+        }
+      }
+    }
+  ]
+}

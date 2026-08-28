@@ -17,6 +17,8 @@ recorded separately in `../aws/state/dev.json`.
 | Processor role | `OurPicturesDevImageProcessorRole` |
 | Local application role | `OurPicturesDevApplicationRole` |
 | Deployment role | `OurPicturesDeployerRole` |
+| Web-host role | `OurPicturesDevWebHostRole` |
+| Web-host instance profile | `OurPicturesDevWebHostProfile` |
 
 The account ID is used as the development bucket suffix. Production must use a
 separate environment, bucket pair, and policy set.
@@ -29,9 +31,11 @@ separate environment, bucket pair, and policy set.
 | `OurPicturesDeployerRole` | `deployer-maintenance-policy.json` after Phase 3A; `deployer-bootstrap-policy.json` only while creating resources |
 | `OurPicturesDevApplicationRole` | `application-runtime-policy.json` |
 | `OurPicturesDevImageProcessorRole` | `image-processor-runtime-policy.json` |
+| `OurPicturesDevWebHostRole` | `web-host-runtime-policy.json` plus AWS-managed `AmazonSSMManagedInstanceCore` |
 | Originals bucket | `originals-bucket-policy.json` |
 | Web bucket | rendered `web-bucket-policy.template.json` |
 | Lambda function | one S3 invoke permission described below |
+| `OurPicturesDeployerRole` hosting extension | `hosting-maintenance-policy.json` |
 
 The deployment role deliberately cannot create roles, change role trust
 policies, or attach IAM policies. An administrator must create the two runtime
@@ -58,6 +62,8 @@ only maintain the fixed development resources recorded in
   `our-pictures-cli` IAM user to assume the local application role.
 - `image-processor-role-trust-policy.json` permits only the Lambda service to
   assume the processor role.
+- `web-host-role-trust-policy.json` permits only the EC2 service to assume the
+  web-host runtime role.
 - `user-assume-roles-policy.json` is the IAM user's complete project role
   allowlist. It permits the deployment and local application roles, but not the
   Lambda execution role.
@@ -101,9 +107,16 @@ These policies do not grant:
 - `s3:DeleteObject`, `s3:DeleteBucket`, Lambda deletion, or CloudFront deletion;
 - public reads of either bucket or reads of original scans through CloudFront;
 - KMS permissions (the first development version uses S3-managed encryption);
-- VPC, RDS, EC2, ECS, Secrets Manager, Route 53, ACM, or production access;
+- RDS, ECS, Secrets Manager, Route 53, ACM, or production access;
 - IAM role/policy administration to the deployment role;
 - application access to Lambda invocation or remote-object deletion.
+
+The hosting extension is limited to the one ECR repository, the
+`/our-pictures/dev/hosting/*` SSM parameter path, read-only EC2 state, and SSM
+commands on the correctly tagged web-host instance. It cannot create, terminate,
+resize, or reconfigure EC2 resources. CloudFront maintenance remains restricted
+to the exact tagged development distribution, including reading the status of
+an invalidation that the same role created.
 
 Direct PUT uploads cannot enforce content length through an IAM condition. The
 application must validate the requested metadata before signing, use a 900

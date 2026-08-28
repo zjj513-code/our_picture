@@ -1,15 +1,15 @@
 # Our Pictures
 
 A restrained, book-like film photography archive for two people. The current
-Phase 3C implementation keeps the approved public experience intact while adding
+Phase 4A development deployment keeps the approved public experience intact while adding
 MySQL persistence, a private admin, direct uploads to private Amazon S3 storage,
-and asynchronous image processing for CloudFront delivery.
+asynchronous image processing, and an externally reachable HTTPS application.
 
 ## Documentation
 
 - [`SPEC.md`](SPEC.md) defines the frozen product boundaries.
 - [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) separates implemented Phases
-  2–3C from the approved, not-yet-implemented Phase 3D target.
+  2–4A from the approved, not-yet-implemented recovery and production-hardening targets.
 - [`docs/decisions`](docs/decisions) records accepted architectural decisions
   that require a superseding decision before they are reversed.
 
@@ -30,7 +30,7 @@ and asynchronous image processing for CloudFront delivery.
 
 The former Cloudflare/vinext wrapper was replaced by standard Next.js Node runtime because direct MySQL connections and native Argon2id are required. The App Router, React components, Tailwind setup, Drizzle schema, and frozen public rendering remain in place.
 
-## Current cloud infrastructure: Phase 3C
+## Current cloud infrastructure: Phase 4A development deployment
 
 The development Phase 3C AWS path is provisioned in account
 `066899195278`:
@@ -40,11 +40,25 @@ The development Phase 3C AWS path is provisioned in account
 - a deployed Node.js 24 arm64 Lambda image processor and 14-day CloudWatch Logs group;
 - an `originals/`-filtered S3 ObjectCreated notification with a Lambda resource
   policy restricted to this account and this originals bucket.
+- one arm64 EC2 `t4g.small` host running the standalone Next.js image and MySQL
+  8.4 in separate Docker containers;
+- an immutable ECR repository for the web image and encrypted SSM parameters
+  for the two database passwords;
+- a CloudFront application origin for the EC2 host, with `/moments/*` continuing
+  to use the private S3/OAC origin;
+- a security group that accepts port 80 only from the AWS-managed CloudFront
+  origin-facing prefix list. There is no SSH key and MySQL is not published.
 
 The exact non-secret resource identifiers and deployment configuration live in
 [`infrastructure/aws`](infrastructure/aws/README.md). A real browser upload has
 been verified through automatic S3 notification, Lambda processing, private
 result reconciliation, MySQL `ready` state, and CloudFront WebP delivery.
+
+The external development URL is
+[`https://d1v1mg445zdh54.cloudfront.net`](https://d1v1mg445zdh54.cloudfront.net).
+This is a verified functional deployment, not a high-availability production
+topology: the application and database share one instance and automated
+database backups, a custom domain, alarms, and multi-instance failover remain.
 
 ## Remaining Phase 3D target, not implemented
 
@@ -153,10 +167,11 @@ npm audit --omit=dev
 
 The integration suite migrates and resets only the dedicated `_test` database. It verifies published and ready-only queries, publication blocking, durable upload-state transitions and processing-result reconciliation, Moment and Photo ordering, Argon2id login success/failure, hashed sessions, protection redirects, same-origin upload guards, CRUD, transactional reordering, cascade deletion, empty public state, local-file preservation, and database-backed homepage rendering.
 
-## Deferred to Phase 3D and production deployment
+## Deferred to Phase 3D and production hardening
 
 Explicit retry/recovery controls, stale-job recovery, remote-object deletion,
-and production deployment are intentionally not implemented yet. Full Phase 3
+automated database backups, high availability, monitoring, and a custom domain
+are intentionally not implemented yet. Full Phase 3
 acceptance batches of 10, 20, and 30 representative film scans also remain.
 EXIF, GPS, camera/scanner metadata, albums, tags, search, likes, comments,
 analytics, and social features remain out of scope.

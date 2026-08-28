@@ -87,6 +87,7 @@
         "cloudfront:CreateInvalidation",
         "cloudfront:GetDistribution",
         "cloudfront:GetDistributionConfig",
+        "cloudfront:GetInvalidation",
         "cloudfront:ListTagsForResource",
         "cloudfront:UpdateDistribution"
       ],

@@ -5,7 +5,7 @@ import {
   SESSION_COOKIE_NAME,
   sessionCookieOptions,
 } from "@/lib/auth";
-import { hasValidOrigin } from "@/lib/admin-session";
+import { adminRedirectUrl, hasValidOrigin } from "@/lib/admin-session";
 
 export async function POST(request: NextRequest) {
   if (!hasValidOrigin(request)) {
@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
   }
 
   await revokeSessionToken(request.cookies.get(SESSION_COOKIE_NAME)?.value);
-  const response = NextResponse.redirect(new URL("/admin/login", request.url), 303);
+  const response = NextResponse.redirect(adminRedirectUrl(request, "/admin/login"), 303);
   response.cookies.set(SESSION_COOKIE_NAME, "", {
     ...sessionCookieOptions(new Date(0)),
     maxAge: 0,

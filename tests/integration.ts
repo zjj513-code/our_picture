@@ -4,6 +4,7 @@ import { access } from "node:fs/promises";
 import { setTimeout as delay } from "node:timers/promises";
 import { eq, inArray } from "drizzle-orm";
 import { migrate } from "drizzle-orm/mysql2/migrator";
+import { NextRequest } from "next/server";
 import { createDatabaseClient } from "@/database/client";
 import {
   createMoment,
@@ -34,6 +35,7 @@ import {
   createSession,
   getAdminForSessionToken,
 } from "@/lib/auth";
+import { adminRedirectUrl } from "@/lib/admin-session";
 
 const testDatabaseUrl = process.env.TEST_DATABASE_URL;
 if (!testDatabaseUrl) throw new Error("TEST_DATABASE_URL is required.");
@@ -52,6 +54,7 @@ try {
   await seedDevelopmentData(client.db);
 
   await verifyPublishedQueries();
+  verifyCanonicalAdminRedirects();
   const password = "correct horse battery staple";
   const admin = await verifyAuthentication(password);
   await verifyRepositoryCrud();
@@ -61,6 +64,22 @@ try {
 } finally {
   stopServer();
   await client.pool.end();
+}
+
+function verifyCanonicalAdminRedirects() {
+  const previousSiteUrl = process.env.SITE_URL;
+  process.env.SITE_URL = "https://photos.example";
+  try {
+    const proxiedRequest = new NextRequest("http://0.0.0.0:3000/admin/auth/login");
+    assert.equal(
+      adminRedirectUrl(proxiedRequest, "/admin").href,
+      "https://photos.example/admin",
+      "admin redirects must use SITE_URL behind a reverse proxy",
+    );
+  } finally {
+    if (previousSiteUrl === undefined) delete process.env.SITE_URL;
+    else process.env.SITE_URL = previousSiteUrl;
+  }
 }
 
 function stopServer() {

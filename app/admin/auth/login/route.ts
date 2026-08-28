@@ -8,7 +8,7 @@ import {
   SESSION_COOKIE_NAME,
   sessionCookieOptions,
 } from "@/lib/auth";
-import { hasValidOrigin } from "@/lib/admin-session";
+import { adminRedirectUrl, hasValidOrigin } from "@/lib/admin-session";
 
 export async function POST(request: NextRequest) {
   if (!hasValidOrigin(request)) {
@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
   await deleteExpiredSessions();
   await revokeSessionToken(request.cookies.get(SESSION_COOKIE_NAME)?.value);
   const session = await createSession(admin);
-  const response = NextResponse.redirect(new URL("/admin", request.url), 303);
+  const response = NextResponse.redirect(adminRedirectUrl(request, "/admin"), 303);
   response.cookies.set(
     SESSION_COOKIE_NAME,
     session.token,
@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
 }
 
 function invalidLogin(request: NextRequest) {
-  const destination = new URL("/admin/login", request.url);
+  const destination = adminRedirectUrl(request, "/admin/login");
   destination.searchParams.set("error", "Invalid username or password.");
   return NextResponse.redirect(destination, 303);
 }

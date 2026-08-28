@@ -9,6 +9,7 @@
         "PUT"
       ],
       "AllowedOrigins": [
+        "https://d1v1mg445zdh54.cloudfront.net",
         "http://127.0.0.1:3000",
         "http://localhost:3000"
       ],

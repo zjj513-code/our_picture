@@ -31,7 +31,7 @@ export async function adminMutationGuard(
   const admin = await getAdminForSessionToken(token);
   if (admin) return null;
 
-  return NextResponse.redirect(new URL("/admin/login", request.url), 303);
+  return NextResponse.redirect(adminRedirectUrl(request, "/admin/login"), 303);
 }
 
 export function hasValidOrigin(request: NextRequest): boolean {
@@ -53,7 +53,12 @@ export function redirectWithNotice(
   kind: "error" | "notice",
   message: string,
 ): NextResponse {
-  const destination = new URL(pathname, request.url);
+  const destination = adminRedirectUrl(request, pathname);
   destination.searchParams.set(kind, message);
   return NextResponse.redirect(destination, 303);
+}
+
+export function adminRedirectUrl(request: NextRequest, pathname: string): URL {
+  const configuredOrigin = process.env.SITE_URL?.trim();
+  return new URL(pathname, configuredOrigin || request.url);
 }

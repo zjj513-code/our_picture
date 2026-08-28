@@ -3,13 +3,13 @@
 ## Document status
 
 This document distinguishes the architecture that exists today from the
-approved target for the remaining Phase 3D work.
+approved target for the remaining Phase 3D and production-hardening work.
 
 - **Current** means implemented and testable in this repository.
 - **Target** means approved direction that has not yet been implemented.
 
 Nothing in the target sections should be read as a claim that the remaining
-recovery, deletion, or production resources already exist.
+recovery, deletion, backup, monitoring, or high-availability resources already exist.
 
 ## Architectural goals
 
@@ -99,6 +99,35 @@ The deployed Node.js 24 arm64 package is the Phase 3C image processor. Automatic
 browser upload through reconciliation and CloudFront delivery has been verified
 with a real development object. Non-secret deployment identifiers are recorded in
 [`infrastructure/aws/state/dev.json`](../infrastructure/aws/state/dev.json).
+
+## Current external hosting: Phase 4A development deployment
+
+The application is externally reachable at
+`https://d1v1mg445zdh54.cloudfront.net`. CloudFront routes normal application
+requests to a fixed-EIP EC2 origin and routes `/moments/*` derivative requests
+to the existing private S3 origin through OAC.
+
+```text
+Public browser -- HTTPS --> CloudFront
+                             |-- default behavior --> EC2 port 80
+                             |                        |-- Next.js container
+                             |                        `-- MySQL 8.4 container
+                             `-- /moments/* -------> private web S3 through OAC
+
+Admin upload -- presigned PUT --> private originals S3 --> Lambda --> private web S3
+```
+
+The host is one arm64 EC2 `t4g.small` instance. The web image is stored in an
+immutable ECR repository. Database passwords are encrypted SSM SecureStrings;
+the EC2 instance receives only its runtime role. The security group accepts
+HTTP only from the AWS-managed CloudFront origin-facing prefix list, exposes no
+SSH port, and does not publish MySQL. IMDSv2 is required.
+
+This topology is intentionally a low-cost functional development deployment.
+Next.js and MySQL share one host and one EBS volume, so it is not highly
+available and currently has no automated database backup. A production launch
+requires a managed or separately backed-up database, alarms, recovery testing,
+a custom domain, and a defined update/rollback process.
 
 ## Current end-to-end architecture: Phase 3C
 
@@ -206,10 +235,13 @@ Image-processing Lambda:
 
 CloudFront:
 
-- deliver only web derivatives;
-- authenticate origin requests with Origin Access Control;
+- terminate public HTTPS and route dynamic application traffic to the EC2 host;
+- deliver `/moments/*` web derivatives from the private web bucket;
+- authenticate S3 origin requests with Origin Access Control;
 - redirect viewers to HTTPS;
-- never expose or route to the originals bucket.
+- never expose or route to the originals bucket;
+- disable caching and forward viewer headers, cookies, and query strings for the
+  dynamic application behavior.
 
 ## Remaining Phase 3D target, not implemented
 
@@ -340,30 +372,29 @@ integration tests:
 
 ## Configuration contract
 
-Phase 3C consumes this configuration:
+The deployed Phase 4A application consumes this configuration:
 
 ```text
+SITE_URL=https://d1v1mg445zdh54.cloudfront.net
+DATABASE_URL=mysql://...
 AWS_REGION=ap-northeast-1
-AWS_ORIGINALS_BUCKET=
-PHOTO_CDN_BASE_URL=
+AWS_ORIGINALS_BUCKET=our-pictures-dev-066899195278-originals
+PHOTO_CDN_BASE_URL=https://d1v1mg445zdh54.cloudfront.net
 AWS_UPLOAD_URL_TTL_SECONDS=900
 ```
 
-These variables must be added to `.env.example` only when application code
-actually consumes them. AWS access-key variables are intentionally not part of
-the application configuration contract.
+`SITE_URL` is also the trusted origin for absolute authentication and mutation
+redirects behind CloudFront; it must not be derived from the container listener
+address. AWS access-key variables are intentionally not part of the application
+configuration contract because EC2 uses its instance role.
 
-## Deployment independence
+## Hosting decision
 
-Phase 3 storage work does not select the final Next.js or MySQL production
-hosting service. The Lambda processor must not require direct access to the
-current local MySQL instance. Using a private processing result that the
-application reconciles keeps storage development usable before a production
-network topology is selected.
-
-Selection of EC2, App Runner, ECS, RDS, or another production compute topology
-belongs to a later deployment decision and must consider cost and operational
-burden.
+Phase 3 storage remains independent of the hosting choice: Lambda does not
+connect to MySQL, and the application reconciles private processing results.
+For Phase 4A, a single EC2 host was selected to minimize networking and managed
+database cost while making the complete development workflow externally
+testable. This does not make single-host EC2 the final production topology.
 
 ## Phased delivery
 
@@ -374,7 +405,8 @@ Phase 3A   S3, IAM, CloudFront, and processor placeholder infrastructure
 Phase 3B   Authenticated direct batch upload
 Phase 3C   Current idempotent image processing and status reconciliation
 Phase 3D   Retry, deletion, recovery, and real-workflow validation
-Phase 4    Production compute, database, domain, backups, and monitoring
+Phase 4A   Current external development compute and database deployment
+Phase 4B   Production database, domain, backups, monitoring, and high availability
 ```
 
 Phase 3C has a verified single-file automatic AWS path from browser upload to
