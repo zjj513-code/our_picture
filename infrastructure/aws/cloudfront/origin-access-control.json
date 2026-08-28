@@ -1,0 +1,9 @@
+{
+  "OriginAccessControlConfig": {
+    "Name": "our-pictures-dev-web-oac",
+    "Description": "Signed CloudFront access to the private Our Pictures development web bucket",
+    "SigningProtocol": "sigv4",
+    "SigningBehavior": "always",
+    "OriginAccessControlOriginType": "s3"
+  }
+}

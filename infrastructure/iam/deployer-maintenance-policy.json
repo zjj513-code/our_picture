@@ -1,0 +1,117 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "MaintainOnlyTheTwoDevelopmentBuckets",
+      "Effect": "Allow",
+      "Action": [
+        "s3:GetBucketCORS",
+        "s3:GetBucketLocation",
+        "s3:GetBucketNotification",
+        "s3:GetBucketOwnershipControls",
+        "s3:GetBucketPolicy",
+        "s3:GetBucketPublicAccessBlock",
+        "s3:GetBucketTagging",
+        "s3:GetBucketVersioning",
+        "s3:GetEncryptionConfiguration",
+        "s3:ListBucket",
+        "s3:PutBucketCORS",
+        "s3:PutBucketNotification",
+        "s3:PutBucketOwnershipControls",
+        "s3:PutBucketPolicy",
+        "s3:PutBucketPublicAccessBlock",
+        "s3:PutBucketTagging",
+        "s3:PutEncryptionConfiguration"
+      ],
+      "Resource": [
+        "arn:aws:s3:::our-pictures-dev-066899195278-originals",
+        "arn:aws:s3:::our-pictures-dev-066899195278-web"
+      ]
+    },
+    {
+      "Sid": "MaintainOnlyTheImageProcessor",
+      "Effect": "Allow",
+      "Action": [
+        "lambda:GetFunction",
+        "lambda:GetFunctionConcurrency",
+        "lambda:GetFunctionConfiguration",
+        "lambda:GetPolicy",
+        "lambda:InvokeFunction",
+        "lambda:ListTags",
+        "lambda:PutFunctionConcurrency",
+        "lambda:UpdateFunctionCode",
+        "lambda:UpdateFunctionConfiguration"
+      ],
+      "Resource": "arn:aws:lambda:ap-northeast-1:066899195278:function:our-pictures-dev-image-processor"
+    },
+    {
+      "Sid": "PreventVpcAttachedImageProcessor",
+      "Effect": "Deny",
+      "Action": "lambda:UpdateFunctionConfiguration",
+      "Resource": "arn:aws:lambda:ap-northeast-1:066899195278:function:our-pictures-dev-image-processor",
+      "Condition": {
+        "Null": {
+          "lambda:VpcIds": "false"
+        }
+      }
+    },
+    {
+      "Sid": "MaintainOnlyTheProcessorLogGroup",
+      "Effect": "Allow",
+      "Action": [
+        "logs:ListTagsForResource",
+        "logs:PutRetentionPolicy",
+        "logs:TagResource"
+      ],
+      "Resource": "arn:aws:logs:ap-northeast-1:066899195278:log-group:/aws/lambda/our-pictures-dev-image-processor"
+    },
+    {
+      "Sid": "ReadProcessorLogGroupState",
+      "Effect": "Allow",
+      "Action": "logs:DescribeLogGroups",
+      "Resource": "*"
+    },
+    {
+      "Sid": "ReadOnlyTheDevelopmentOriginAccessControl",
+      "Effect": "Allow",
+      "Action": [
+        "cloudfront:GetOriginAccessControl",
+        "cloudfront:GetOriginAccessControlConfig"
+      ],
+      "Resource": "arn:aws:cloudfront::066899195278:origin-access-control/E2FOX0AAG8GTZM"
+    },
+    {
+      "Sid": "MaintainOnlyTheDevelopmentDistribution",
+      "Effect": "Allow",
+      "Action": [
+        "cloudfront:CreateInvalidation",
+        "cloudfront:GetDistribution",
+        "cloudfront:GetDistributionConfig",
+        "cloudfront:ListTagsForResource",
+        "cloudfront:UpdateDistribution"
+      ],
+      "Resource": "arn:aws:cloudfront::066899195278:distribution/E27LBWNJWHPBCQ",
+      "Condition": {
+        "StringEquals": {
+          "aws:ResourceTag/Project": "OurPictures",
+          "aws:ResourceTag/Environment": "dev"
+        }
+      }
+    },
+    {
+      "Sid": "DenyRegionalInfrastructureOutsideTokyo",
+      "Effect": "Deny",
+      "Action": [
+        "lambda:*",
+        "logs:*",
+        "s3:*"
+      ],
+      "Resource": "*",
+      "Condition": {
+        "StringNotEquals": {
+          "aws:RequestedRegion": "ap-northeast-1"
+        }
+      }
+    }
+  ]
+}

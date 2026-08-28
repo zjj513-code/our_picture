@@ -1,8 +1,9 @@
 # Our Pictures IAM policies
 
 These policies define the Phase 3 development environment security boundary.
-They are policy artifacts only: adding these files does not create or modify an
-AWS resource.
+Adding a policy file alone does not create or modify an AWS resource. The
+development assignments described below are active; deployed resource IDs are
+recorded separately in `../aws/state/dev.json`.
 
 ## Fixed development resource names
 
@@ -25,7 +26,7 @@ separate environment, bucket pair, and policy set.
 | Principal or resource | Policy |
 | --- | --- |
 | `our-pictures-cli` | `user-assume-roles-policy.json` |
-| `OurPicturesDeployerRole` | `deployer-bootstrap-policy.json`, temporarily during Phase 3A only |
+| `OurPicturesDeployerRole` | `deployer-maintenance-policy.json` after Phase 3A; `deployer-bootstrap-policy.json` only while creating resources |
 | `OurPicturesDevApplicationRole` | `application-runtime-policy.json` |
 | `OurPicturesDevImageProcessorRole` | `image-processor-runtime-policy.json` |
 | Originals bucket | `originals-bucket-policy.json` |
@@ -45,6 +46,11 @@ still constrained by required `Project=OurPictures` and `Environment=dev`
 request tags. Remove the bootstrap policy after the resource IDs are known and
 replace it with a generated maintenance policy scoped to the exact distribution
 and OAC IDs.
+
+`deployer-maintenance-policy.json` is that generated post-bootstrap policy. It
+cannot create buckets, functions, log groups, distributions, or OACs; it can
+only maintain the fixed development resources recorded in
+`../aws/state/dev.json`.
 
 ## Trust policies
 

@@ -1,0 +1,16 @@
+{
+  "accountId": "066899195278",
+  "region": "ap-northeast-1",
+  "originalsBucket": "our-pictures-dev-066899195278-originals",
+  "webBucket": "our-pictures-dev-066899195278-web",
+  "imageProcessorFunction": "our-pictures-dev-image-processor",
+  "imageProcessorRuntime": "nodejs24.x",
+  "deployerInlinePolicy": "OurPicturesPhase3AMaintenance",
+  "bootstrapPolicyAttached": false,
+  "cloudFrontOriginAccessControlId": "E2FOX0AAG8GTZM",
+  "cloudFrontDistributionId": "E27LBWNJWHPBCQ",
+  "cloudFrontDomainName": "d1v1mg445zdh54.cloudfront.net",
+  "cloudFrontStatus": "Deployed",
+  "s3NotificationEnabled": false,
+  "processorImplementation": "phase3a-placeholder"
+}

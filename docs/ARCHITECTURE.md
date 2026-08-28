@@ -55,11 +55,28 @@ Current characteristics:
   hashed sessions.
 - Argon2id protects administrator passwords.
 - Photo records refer to local sample files under `public/photos`.
-- There is no real upload endpoint, AWS SDK integration, S3 bucket, Lambda
-  processor, CloudFront distribution, or remote-object deletion workflow.
+- There is no real upload endpoint, application AWS SDK integration, image
+  processor implementation, processing reconciliation, or remote-object
+  deletion workflow.
 - Removing a current Photo record does not delete a local image file.
 
-## Target architecture: Phase 3, not implemented
+## Current AWS infrastructure: Phase 3A
+
+The development AWS foundation is provisioned, but it is not connected to the
+application:
+
+- private originals bucket `our-pictures-dev-066899195278-originals`;
+- private web bucket `our-pictures-dev-066899195278-web`;
+- CloudFront distribution `E27LBWNJWHPBCQ` using OAC `E2FOX0AAG8GTZM`;
+- Lambda function `our-pictures-dev-image-processor` using the dedicated
+  execution role and a 14-day CloudWatch Logs retention policy.
+
+The Lambda deployment is a Phase 3A placeholder. The originals bucket has no
+event notification, so uploads cannot be acknowledged by incomplete processor
+code. Non-secret deployment identifiers are recorded in
+[`infrastructure/aws/state/dev.json`](../infrastructure/aws/state/dev.json).
+
+## Target end-to-end architecture: Phase 3B–3D, not implemented
 
 The target storage and delivery path is:
 
@@ -325,7 +342,7 @@ burden.
 ```text
 Phase 2    Current MySQL and private-admin baseline
 Phase 2.5  Product, architecture, and decision documentation
-Phase 3A   S3, IAM, CloudFront, and processing infrastructure
+Phase 3A   Current S3, IAM, CloudFront, and processor placeholder infrastructure
 Phase 3B   Authenticated direct batch upload
 Phase 3C   Idempotent image processing and status reconciliation
 Phase 3D   Retry, deletion, recovery, and real-workflow validation

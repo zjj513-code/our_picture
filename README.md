@@ -23,7 +23,23 @@ MySQL persistence and a minimal private admin.
 
 The former Cloudflare/vinext wrapper was replaced by standard Next.js Node runtime because direct MySQL connections and native Argon2id are required. The App Router, React components, Tailwind setup, Drizzle schema, and frozen public rendering remain in place.
 
-## Target architecture: Phase 3, not implemented
+## Current cloud infrastructure: Phase 3A
+
+The development Phase 3A AWS foundation is now provisioned in account
+`066899195278`:
+
+- two private S3 buckets in `ap-northeast-1` for originals and web derivatives;
+- a private CloudFront S3 origin using Origin Access Control;
+- a tagged Lambda function and 14-day CloudWatch Logs group for the future
+  image processor.
+
+The exact non-secret resource identifiers and deployment configuration live in
+[`infrastructure/aws`](infrastructure/aws/README.md). The deployed Lambda code
+is an explicit Phase 3A placeholder and the S3 event notification is disabled.
+The application does not yet issue upload URLs, upload files, reconcile
+processing results, or serve these CloudFront objects.
+
+## Target end-to-end architecture: Phase 3B–3D, not implemented
 
 Phase 3 will add direct browser uploads to private Amazon S3 storage in
 `ap-northeast-1` (Tokyo), asynchronous image processing with AWS Lambda, a
@@ -36,9 +52,10 @@ failure model, object-key policy, and implementation phases are documented in
 [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 
 The development IAM policy set is checked in under
-[`infrastructure/iam`](infrastructure/iam/README.md). These policy documents are
-ready for review but are not evidence that any S3, Lambda, or CloudFront
-resource has been created or that the deployment role has received them.
+[`infrastructure/iam`](infrastructure/iam/README.md). Runtime and temporary
+deployment policies are active for the Phase 3 development environment. The
+temporary bootstrap policy must be replaced with an exact-ID maintenance policy
+after Phase 3A verification.
 
 ## Local setup
 
@@ -127,9 +144,10 @@ npm audit --omit=dev
 
 The integration suite migrates and resets only the dedicated `_test` database. It verifies published-only queries, Moment and Photo ordering, Argon2id login success/failure, hashed sessions, protection redirects, CRUD, transactional reordering, cascade deletion, empty public state, local-file preservation, and database-backed homepage rendering.
 
-## Deferred to Phase 3
+## Deferred to Phase 3B–3D
 
-Amazon S3 uploads, AWS Lambda image processing, Amazon CloudFront delivery,
+Authenticated Amazon S3 uploads, real AWS Lambda image processing, application
+integration with Amazon CloudFront, processing-result reconciliation,
 remote-object deletion, and production deployment are intentionally not
 implemented yet. EXIF, GPS, camera/scanner metadata, albums, tags, search,
 likes, comments, analytics, and social features remain out of scope.
