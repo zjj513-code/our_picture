@@ -26,5 +26,9 @@
   "s3NotificationEnabled": true,
   "s3NotificationId": "ProcessOurPicturesOriginals",
   "lambdaInvokePermissionStatementId": "AllowOurPicturesOriginalsBucket",
-  "processorImplementation": "phase3c-idempotent-image-processor"
+  "processorImplementation": "phase3c-idempotent-image-processor",
+  "externalUploadVerifiedAt": "2026-08-28T21:51:04+09:00",
+  "externalUploadVerificationPhotoId": "0947f114-4d77-4543-b157-75095ce58927",
+  "externalUploadVerificationWebKey": "moments/f0e35c73-bc0a-4856-b055-0b5b6f9d1dcd/photos/0947f114-4d77-4543-b157-75095ce58927/display.webp",
+  "externalUploadVerificationDimensions": "1536x1023"
 }

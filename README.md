@@ -50,9 +50,11 @@ The development Phase 3C AWS path is provisioned in account
   origin-facing prefix list. There is no SSH key and MySQL is not published.
 
 The exact non-secret resource identifiers and deployment configuration live in
-[`infrastructure/aws`](infrastructure/aws/README.md). A real browser upload has
-been verified through automatic S3 notification, Lambda processing, private
-result reconciliation, MySQL `ready` state, and CloudFront WebP delivery.
+[`infrastructure/aws`](infrastructure/aws/README.md). A real JPEG submitted
+through the externally deployed application's authenticated upload API and its
+generated presigned PUT has been verified through automatic S3 notification,
+Lambda processing, private result reconciliation, MySQL `ready` state, and
+CloudFront WebP delivery.
 
 The external development URL is
 [`https://d1v1mg445zdh54.cloudfront.net`](https://d1v1mg445zdh54.cloudfront.net).

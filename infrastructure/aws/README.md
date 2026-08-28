@@ -20,8 +20,10 @@ development S3, Lambda, CloudFront, ECR, and EC2 resources described in
   invocation, duplicate-event handling, result reconciliation, and CloudFront
   delivery have been verified with real uploaded originals.
 - Automatic S3 invocation is enabled for ObjectCreated events under the
-  `originals/` prefix. A browser upload has been verified through automatic
-  processing, application reconciliation, and CloudFront delivery.
+  `originals/` prefix. The externally deployed application's authenticated
+  upload endpoints and generated presigned PUT were verified with a real JPEG
+  through automatic processing, application reconciliation, and CloudFront
+  delivery on 2026-08-28.
 - CloudFront's default behavior routes the externally reachable application to
   the EC2 web host with caching disabled; `/moments/*` remains on the private
   S3/OAC origin.
@@ -48,6 +50,8 @@ development S3, Lambda, CloudFront, ECR, and EC2 resources described in
 
 The generated CloudFront distribution ID, domain, and OAC ID are recorded in
 `state/dev.json` after deployment. They are resource identifiers, not secrets.
+The same state file records the non-secret Photo ID, derivative key, dimensions,
+and timestamp from the latest external upload acceptance check.
 
 ## Processor package and deployment
 
