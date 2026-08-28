@@ -1,4 +1,5 @@
 export type MomentStatus = "draft" | "published";
+export type PhotoStatus = "pending" | "processing" | "ready" | "failed";
 
 export type Photo = {
   id: string;
@@ -6,8 +7,17 @@ export type Photo = {
   originalKey: string;
   webKey: string;
   thumbnailKey: string | null;
-  width: number;
-  height: number;
+  webUrl: string;
+  thumbnailUrl: string | null;
+  originalFilename: string | null;
+  originalContentType: string | null;
+  originalByteSize: number | null;
+  checksum: string | null;
+  status: PhotoStatus;
+  processingError: string | null;
+  processedAt: string | null;
+  width: number | null;
+  height: number | null;
   altText: string | null;
   sortOrder: number;
   createdAt: string;

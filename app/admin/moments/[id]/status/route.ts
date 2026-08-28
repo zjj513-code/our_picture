@@ -1,5 +1,5 @@
 import type { NextRequest } from "next/server";
-import { setMomentStatus } from "@/database/moments";
+import { MomentPublicationError, setMomentStatus } from "@/database/moments";
 import { AdminInputError, parseRecordId } from "@/lib/admin-validation";
 import { adminMutationGuard, redirectWithNotice } from "@/lib/admin-session";
 import type { MomentStatus } from "@/lib/types";
@@ -29,7 +29,9 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
       status === "published" ? "Moment published." : "Moment returned to draft.",
     );
   } catch (error) {
-    const message = error instanceof AdminInputError ? error.message : "Could not change status.";
+    const message = error instanceof AdminInputError || error instanceof MomentPublicationError
+      ? error.message
+      : "Could not change status.";
     return redirectWithNotice(request, destination, "error", message);
   }
 }

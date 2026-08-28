@@ -4,6 +4,7 @@ import type { Database } from "@/database/client";
 import { getDb } from "@/database/client";
 import { toMySqlDateTime } from "@/database/datetime";
 import { moments, photos } from "@/database/schema";
+import { resolveOptionalPhotoUrl, resolvePhotoUrl } from "@/lib/photo-url";
 import type { Moment, MomentStatus, Photo } from "@/lib/types";
 
 export type MomentInput = {
@@ -24,6 +25,8 @@ export type AdminMomentSummary = {
 };
 
 export class PhotoOrderError extends Error {}
+export class MomentPublicationError extends Error {}
+export class PhotoRemovalError extends Error {}
 
 export async function getPublishedMoments(
   db: Database = getDb(),
@@ -34,7 +37,8 @@ export async function getPublishedMoments(
     .where(eq(moments.status, "published"))
     .orderBy(desc(moments.date), desc(moments.createdAt));
 
-  return attachPhotos(rows, db);
+  const withPhotos = await attachPhotos(rows, db, true);
+  return withPhotos.filter(({ photos: readyPhotos }) => readyPhotos.length > 0);
 }
 
 export async function listAdminMoments(
@@ -97,6 +101,17 @@ export async function setMomentStatus(
   status: MomentStatus,
   db: Database = getDb(),
 ): Promise<boolean> {
+  if (status === "published") {
+    const ready = await db
+      .select({ count: count(photos.id) })
+      .from(photos)
+      .where(and(eq(photos.momentId, id), eq(photos.status, "ready")));
+    if ((ready[0]?.count ?? 0) === 0) {
+      throw new MomentPublicationError(
+        "A Moment needs at least one ready photo before it can be published.",
+      );
+    }
+  }
   const now = toMySqlDateTime(new Date());
   const result = await db
     .update(moments)
@@ -164,6 +179,25 @@ export async function removePhoto(
   db: Database = getDb(),
 ): Promise<boolean> {
   return db.transaction(async (transaction) => {
+    const target = await transaction
+      .select({ photoStatus: photos.status, momentStatus: moments.status })
+      .from(photos)
+      .innerJoin(moments, eq(moments.id, photos.momentId))
+      .where(and(eq(photos.id, photoId), eq(photos.momentId, momentId)))
+      .limit(1)
+      .for("update");
+    if (target.length === 0) return false;
+    if (target[0].photoStatus === "ready" && target[0].momentStatus === "published") {
+      const ready = await transaction
+        .select({ count: count(photos.id) })
+        .from(photos)
+        .where(and(eq(photos.momentId, momentId), eq(photos.status, "ready")));
+      if ((ready[0]?.count ?? 0) <= 1) {
+        throw new PhotoRemovalError(
+          "Return this Moment to draft before removing its last ready photo.",
+        );
+      }
+    }
     const result = await transaction
       .delete(photos)
       .where(and(eq(photos.id, photoId), eq(photos.momentId, momentId)));
@@ -196,6 +230,7 @@ export async function removePhoto(
 async function attachPhotos(
   momentRows: Array<typeof moments.$inferSelect>,
   db: Database,
+  readyOnly = false,
 ): Promise<Moment[]> {
   if (momentRows.length === 0) return [];
 
@@ -203,17 +238,29 @@ async function attachPhotos(
     .select()
     .from(photos)
     .where(
-      inArray(
-        photos.momentId,
-        momentRows.map(({ id }) => id),
-      ),
+      readyOnly
+        ? and(
+            inArray(
+              photos.momentId,
+              momentRows.map(({ id }) => id),
+            ),
+            eq(photos.status, "ready"),
+          )
+        : inArray(
+            photos.momentId,
+            momentRows.map(({ id }) => id),
+          ),
     )
     .orderBy(asc(photos.momentId), asc(photos.sortOrder));
   const photosByMoment = new Map<string, Photo[]>();
 
   for (const row of photoRows) {
     const grouped = photosByMoment.get(row.momentId) ?? [];
-    grouped.push(row);
+    grouped.push({
+      ...row,
+      webUrl: resolvePhotoUrl(row.webKey),
+      thumbnailUrl: resolveOptionalPhotoUrl(row.thumbnailKey),
+    });
     photosByMoment.set(row.momentId, grouped);
   }
 

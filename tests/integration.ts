@@ -10,11 +10,20 @@ import {
   deleteMoment,
   getMomentById,
   getPublishedMoments,
+  MomentPublicationError,
+  PhotoRemovalError,
   removePhoto,
   reorderPhotos,
   setMomentStatus,
   updateMoment,
 } from "@/database/moments";
+import {
+  createPendingPhotoUploads,
+  getPhotoUpload,
+  markPhotoFailed,
+  markPhotoProcessing,
+  resetPhotoUpload,
+} from "@/database/photo-uploads";
 import { seedDevelopmentData } from "@/database/seed";
 import { developmentSeedMoments } from "@/database/seed-data";
 import { adminSessions, adminUsers, moments, photos } from "@/database/schema";
@@ -47,7 +56,7 @@ try {
   await verifyRepositoryCrud();
   await verifyHttpFlows(admin.username, password);
 
-  console.log("✓ Phase 2 MySQL, authentication, admin CRUD, and public rendering checks passed.");
+  console.log("✓ Phase 3B database, authentication, upload-state, admin, and public checks passed.");
 } finally {
   stopServer();
   await client.pool.end();
@@ -71,6 +80,21 @@ async function verifyPublishedQueries() {
     title: "PRIVATE DRAFT SHOULD NOT RENDER",
     status: "draft",
   });
+  await client.db.insert(moments).values({
+    id: "published-with-pending-only",
+    date: "2027-01-03",
+    title: "PENDING SHOULD NOT RENDER",
+    status: "published",
+  });
+  await client.db.insert(photos).values({
+    id: "pending-public-photo",
+    momentId: "published-with-pending-only",
+    originalKey: "originals/moments/published-with-pending-only/photos/pending-public-photo/source.jpg",
+    webKey: "moments/published-with-pending-only/photos/pending-public-photo/display.webp",
+    thumbnailKey: "moments/published-with-pending-only/photos/pending-public-photo/thumbnail.webp",
+    status: "pending",
+    sortOrder: 0,
+  });
 
   const published = await getPublishedMoments(client.db);
   assert.deepEqual(
@@ -85,6 +109,7 @@ async function verifyPublishedQueries() {
       "photos must be ordered by sortOrder",
     );
   }
+  assert.equal(published.some(({ id }) => id === "published-with-pending-only"), false);
 }
 
 async function verifyAuthentication(password: string) {
@@ -130,8 +155,10 @@ async function verifyRepositoryCrud() {
     ),
     true,
   );
-  assert.equal(await setMomentStatus(id, "published", client.db), true);
-  assert.equal((await getMomentById(id, client.db))?.status, "published");
+  await assert.rejects(
+    setMomentStatus(id, "published", client.db),
+    MomentPublicationError,
+  );
 
   const photoIds = ["crud-photo-a", "crud-photo-b", "crud-photo-c"];
   await client.db.insert(photos).values(
@@ -146,6 +173,8 @@ async function verifyRepositoryCrud() {
       sortOrder,
     })),
   );
+  assert.equal(await setMomentStatus(id, "published", client.db), true);
+  assert.equal((await getMomentById(id, client.db))?.status, "published");
   await reorderPhotos(id, [photoIds[2], photoIds[0], photoIds[1]], client.db);
   assert.deepEqual(
     (await getMomentById(id, client.db))?.photos.map(({ id: photoId }) => photoId),
@@ -156,6 +185,11 @@ async function verifyRepositoryCrud() {
     (await getMomentById(id, client.db))?.photos.map(({ sortOrder }) => sortOrder),
     [0, 1],
   );
+  assert.equal(await removePhoto(id, photoIds[2], client.db), true);
+  await assert.rejects(
+    removePhoto(id, photoIds[1], client.db),
+    PhotoRemovalError,
+  );
   assert.equal(await deleteMoment(id, client.db), true);
   assert.equal(await getMomentById(id, client.db), null);
   assert.equal(
@@ -165,6 +199,30 @@ async function verifyRepositoryCrud() {
     0,
     "Moment deletion must cascade to Photo records",
   );
+
+  const uploadMomentId = await createMoment(
+    { date: "2026-02-17", title: "Upload state", location: null, caption: null },
+    client.db,
+  );
+  const pending = await createPendingPhotoUploads(uploadMomentId, [{
+    clientId: "test-upload",
+    filename: "scan 01.tif",
+    contentType: "image/tiff",
+    byteSize: 1234,
+    checksum: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+    extension: "tif",
+  }], client.db);
+  assert.equal(pending?.length, 1);
+  assert.match(pending?.[0].originalKey ?? "", /^originals\/moments\/.+\/source\.tif$/);
+  const uploadPhotoId = pending?.[0].photoId;
+  assert.ok(uploadPhotoId);
+  assert.equal((await getPhotoUpload(uploadMomentId, uploadPhotoId, client.db))?.status, "pending");
+  assert.equal(await markPhotoProcessing(uploadMomentId, uploadPhotoId, client.db), true);
+  assert.equal((await getPhotoUpload(uploadMomentId, uploadPhotoId, client.db))?.status, "processing");
+  await markPhotoFailed(uploadMomentId, uploadPhotoId, "processor failed", client.db);
+  assert.equal(await resetPhotoUpload(uploadMomentId, uploadPhotoId, client.db), true);
+  assert.equal((await getPhotoUpload(uploadMomentId, uploadPhotoId, client.db))?.status, "pending");
+  await deleteMoment(uploadMomentId, client.db);
 }
 
 async function verifyHttpFlows(username: string, password: string) {
@@ -234,6 +292,31 @@ async function verifyHttpFlows(username: string, password: string) {
   const createdId = /\/admin\/moments\/([^?]+)/.exec(createdLocation)?.[1];
   assert.ok(createdId);
   assert.equal((await getMomentById(createdId, client.db))?.status, "draft");
+
+  const blockedPublish = await postForm(
+    `${origin}/admin/moments/${createdId}/status`,
+    origin,
+    { status: "published" },
+    cookie,
+  );
+  assert.equal(blockedPublish.status, 303);
+  assert.match(blockedPublish.headers.get("location") ?? "", /error=/);
+  assert.equal((await getMomentById(createdId, client.db))?.status, "draft");
+
+  const invalidUpload = await fetch(`${origin}/admin/moments/${createdId}/uploads`, {
+    method: "POST",
+    headers: { cookie, origin, "content-type": "application/json" },
+    body: JSON.stringify({ files: [] }),
+  });
+  assert.equal(invalidUpload.status, 400);
+
+  const crossOriginUpload = await fetch(`${origin}/admin/moments/${createdId}/uploads`, {
+    method: "POST",
+    headers: { cookie, origin: "https://attacker.example", "content-type": "application/json" },
+    body: JSON.stringify({ files: [] }),
+    redirect: "manual",
+  });
+  assert.equal(crossOriginUpload.status, 403);
 
   const httpPhotoIds = ["http-photo-a", "http-photo-b", "http-photo-c"];
   await client.db.insert(photos).values(

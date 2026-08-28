@@ -1,24 +1,27 @@
 # Our Pictures
 
 A restrained, book-like film photography archive for two people. The current
-Phase 2 implementation keeps the approved public experience intact while adding
-MySQL persistence and a minimal private admin.
+Phase 3B implementation keeps the approved public experience intact while adding
+MySQL persistence, a private admin, and authenticated direct uploads to Amazon S3.
 
 ## Documentation
 
 - [`SPEC.md`](SPEC.md) defines the frozen product boundaries.
-- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) separates the implemented Phase
-  2 architecture from the approved, not-yet-implemented Phase 3 AWS target.
+- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) separates implemented Phases
+  2–3B from the approved, not-yet-implemented Phase 3C–3D target.
 - [`docs/decisions`](docs/decisions) records accepted architectural decisions
   that require a superseding decision before they are reversed.
 
-## Current architecture: Phase 2
+## Current architecture: Phase 3B
 
 - **Next.js App Router + TypeScript** server-renders the public feed and all admin pages. The initial public Moment feed does not use client-side API fetching.
 - **Drizzle ORM + MySQL 8.4** store Moments, Photo metadata, two admin accounts, and hashed-token sessions.
 - **Argon2id** hashes admin passwords. Login creates opaque 256-bit session tokens; only SHA-256 token hashes are stored in MySQL.
 - **Server-side sessions** use `HttpOnly`, `SameSite=Lax`, path-scoped cookies. Cookies become `Secure` automatically in production.
 - **Route Handlers** process form mutations. Every admin mutation verifies the session and same-origin request server-side.
+- **Direct S3 uploads** use short-lived, per-object presigned PUT URLs. The browser uploads at most three files concurrently and reports per-file progress.
+- **Durable Photo states** distinguish `pending`, `processing`, `ready`, and `failed`. S3 object size, media type, and SHA-256 are verified before a Photo advances to `processing`.
+- **Publication rules** require at least one `ready` Photo; public queries exclude all other Photo states.
 - **Local responsive images** remain development and seed assets. Removing Photo records never deletes files in `public/photos`.
 
 The former Cloudflare/vinext wrapper was replaced by standard Next.js Node runtime because direct MySQL connections and native Argon2id are required. The App Router, React components, Tailwind setup, Drizzle schema, and frozen public rendering remain in place.
@@ -36,15 +39,14 @@ The development Phase 3A AWS foundation is now provisioned in account
 The exact non-secret resource identifiers and deployment configuration live in
 [`infrastructure/aws`](infrastructure/aws/README.md). The deployed Lambda code
 is an explicit Phase 3A placeholder and the S3 event notification is disabled.
-The application does not yet issue upload URLs, upload files, reconcile
-processing results, or serve these CloudFront objects.
+Phase 3B now writes originals to the private originals bucket, but it does not
+process them, reconcile processing results, or serve CloudFront derivatives.
 
-## Target end-to-end architecture: Phase 3B–3D, not implemented
+## Target end-to-end architecture: Phase 3C–3D, not implemented
 
-Phase 3 will add direct browser uploads to private Amazon S3 storage in
-`ap-northeast-1` (Tokyo), asynchronous image processing with AWS Lambda, a
-separate private bucket for web derivatives, and public derivative delivery
-through Amazon CloudFront with Origin Access Control.
+Phase 3C–3D will add asynchronous image processing with AWS Lambda, processing
+result reconciliation, retry/recovery operations, remote-object deletion, and
+public derivative delivery through Amazon CloudFront with Origin Access Control.
 
 Original film scans will never be public. The browser will receive only
 short-lived upload URLs, not permanent AWS credentials. The detailed target,
@@ -54,8 +56,8 @@ failure model, object-key policy, and implementation phases are documented in
 The development IAM policy set is checked in under
 [`infrastructure/iam`](infrastructure/iam/README.md). Runtime and temporary
 deployment policies are active for the Phase 3 development environment. The
-temporary bootstrap policy must be replaced with an exact-ID maintenance policy
-after Phase 3A verification.
+temporary bootstrap policy has been removed and replaced by the exact-ID
+maintenance policy after Phase 3A verification.
 
 ## Local setup
 
@@ -117,7 +119,7 @@ The current schema uses a MySQL `DATE` string for `Moment.date`, so calendar dat
 - `/admin/login` — username/password login
 - `/admin` — Moment list
 - `/admin/moments/new` — create a draft Moment
-- `/admin/moments/[id]` — edit metadata, publish/draft, reorder/remove Photos, and confirm deletion
+- `/admin/moments/[id]` — edit metadata, batch-upload originals, inspect durable upload state, publish/draft, reorder/remove Photos, and confirm deletion
 - `/admin/moments/[id]/preview` — protected preview for draft or published Moments
 
 There is no registration, public account creation, OAuth, password-reset email, user profile, analytics, or role system.
@@ -128,6 +130,10 @@ There is no registration, public account creation, OAuth, password-reset email, 
 - `DATABASE_URL` — application MySQL connection URL
 - `TEST_DATABASE_URL` — dedicated database ending in `_test`; destructive test cleanup is refused for other names
 - `SESSION_COOKIE_SECURE` — optional local/test override; production defaults to secure cookies
+- `AWS_PROFILE` — optional local named profile used by the standard AWS SDK credential chain
+- `AWS_REGION`, `AWS_ORIGINALS_BUCKET` — Phase 3B S3 target
+- `AWS_UPLOAD_URL_TTL_SECONDS` — upload URL lifetime from 60–900 seconds
+- `PHOTO_CDN_BASE_URL` — resolves non-local web object keys without storing deployment URLs in MySQL
 - `ADMIN_USERNAME`, `ADMIN_PASSWORD` — optional non-interactive inputs for `admin:create`
 
 Never commit `.env.local` or real credentials.
@@ -142,12 +148,13 @@ npm test
 npm audit --omit=dev
 ```
 
-The integration suite migrates and resets only the dedicated `_test` database. It verifies published-only queries, Moment and Photo ordering, Argon2id login success/failure, hashed sessions, protection redirects, CRUD, transactional reordering, cascade deletion, empty public state, local-file preservation, and database-backed homepage rendering.
+The integration suite migrates and resets only the dedicated `_test` database. It verifies published and ready-only queries, publication blocking, durable upload-state transitions, Moment and Photo ordering, Argon2id login success/failure, hashed sessions, protection redirects, same-origin upload guards, CRUD, transactional reordering, cascade deletion, empty public state, local-file preservation, and database-backed homepage rendering.
 
-## Deferred to Phase 3B–3D
+## Deferred to Phase 3C–3D
 
-Authenticated Amazon S3 uploads, real AWS Lambda image processing, application
-integration with Amazon CloudFront, processing-result reconciliation,
-remote-object deletion, and production deployment are intentionally not
-implemented yet. EXIF, GPS, camera/scanner metadata, albums, tags, search,
-likes, comments, analytics, and social features remain out of scope.
+Real AWS Lambda image processing, application integration with Amazon CloudFront,
+processing-result reconciliation, stale-job recovery, remote-object deletion,
+and production deployment are intentionally not implemented yet. Full Phase 3
+acceptance batches of 10, 20, and 30 representative film scans also remain.
+EXIF, GPS, camera/scanner metadata, albums, tags, search, likes, comments,
+analytics, and social features remain out of scope.

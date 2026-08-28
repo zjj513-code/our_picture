@@ -27,6 +27,7 @@ function samplePhotos(
       originalKey: `original/sample/${momentId}-${number}.jpg`,
       webKey: `/photos/sample-${number}.jpg`,
       thumbnailKey: `/photos/sample-${number}-768.jpg`,
+      status: "ready",
       width: 1536,
       height: 1023,
       altText,

@@ -3,7 +3,7 @@
 ## Document status
 
 This document distinguishes the architecture that exists today from the
-approved target for Phase 3.
+approved target for the remaining Phase 3 work.
 
 - **Current** means implemented and testable in this repository.
 - **Target** means approved direction that has not yet been implemented.
@@ -25,7 +25,7 @@ already exists.
 Product requirements and non-goals are defined in [`SPEC.md`](../SPEC.md).
 Accepted infrastructure decisions are recorded in [`docs/decisions`](decisions).
 
-## Current architecture: Phase 2
+## Current architecture: Phase 3B
 
 The current application is a single Next.js App Router project using the Node.js
 runtime.
@@ -38,9 +38,12 @@ Next.js application
    |-- server-rendered public Moment feed
    |-- private admin pages and Route Handlers
    |-- server-side session authentication
+   |-- presigned S3 upload initialization and completion verification
    |
    v
 MySQL 8.4
+
+Administrator browser -- direct PUT --> private originals S3 bucket
 
 Development and seed Photos
    |
@@ -54,16 +57,19 @@ Current characteristics:
 - Drizzle ORM and MySQL store Moments, Photo metadata, administrators, and
   hashed sessions.
 - Argon2id protects administrator passwords.
-- Photo records refer to local sample files under `public/photos`.
-- There is no real upload endpoint, application AWS SDK integration, image
-  processor implementation, processing reconciliation, or remote-object
-  deletion workflow.
+- Seed Photo records refer to local sample files under `public/photos`.
+- Authenticated administrators can upload batches of 1–30 JPEG, PNG, WebP, or
+  TIFF originals, with three concurrent direct S3 PUTs and per-file retry.
+- The application verifies S3 size, media type, and SHA-256 before changing a
+  Photo from `pending` to `processing`.
+- There is no image processor implementation, processing-result reconciliation,
+  stale-job recovery, or remote-object deletion workflow.
 - Removing a current Photo record does not delete a local image file.
 
 ## Current AWS infrastructure: Phase 3A
 
-The development AWS foundation is provisioned, but it is not connected to the
-application:
+The development AWS foundation is provisioned. Phase 3B connects the application
+only to the private originals bucket:
 
 - private originals bucket `our-pictures-dev-066899195278-originals`;
 - private web bucket `our-pictures-dev-066899195278-web`;
@@ -76,7 +82,7 @@ event notification, so uploads cannot be acknowledged by incomplete processor
 code. Non-secret deployment identifiers are recorded in
 [`infrastructure/aws/state/dev.json`](../infrastructure/aws/state/dev.json).
 
-## Target end-to-end architecture: Phase 3B–3D, not implemented
+## Target end-to-end architecture: Phase 3C–3D, not implemented
 
 The target storage and delivery path is:
 
@@ -199,19 +205,19 @@ pending -> processing -> ready
 Browser-only presentation states may include `queued` and `uploading` with a
 percentage, but these are not durable database states.
 
-1. The application creates a Photo ID and deterministic keys with status
+1. **Implemented in Phase 3B:** the application creates a Photo ID and deterministic keys with status
    `pending`.
-2. The application returns a short-lived presigned PUT URL for the original
+2. **Implemented in Phase 3B:** the application returns a short-lived presigned PUT URL for the original
    key.
-3. The browser uploads directly to the originals bucket.
-4. The browser reports success to the application, which advances the Photo to
+3. **Implemented in Phase 3B:** the browser uploads directly to the originals bucket.
+4. **Implemented in Phase 3B:** the browser reports success to the application, which verifies the stored object and advances the Photo to
    `processing`. Reconciliation must also recover if the browser closes before
    this callback.
-5. S3 invokes the processor asynchronously.
-6. Lambda writes derivatives and a processing result.
-7. The application reconciles the result, records dimensions and metadata, and
+5. **Target Phase 3C:** S3 invokes the processor asynchronously.
+6. **Target Phase 3C:** Lambda writes derivatives and a processing result.
+7. **Target Phase 3C:** the application reconciles the result, records dimensions and metadata, and
    sets the Photo to `ready` or `failed`.
-8. Only `ready` Photos are eligible for public queries and publication.
+8. **Implemented in Phase 3B:** only `ready` Photos are eligible for public queries and publication.
 
 The application must validate again after upload. A presigned URL is not a
 substitute for verifying the actual object size, media type, checksum, and
@@ -310,13 +316,11 @@ integration tests:
 
 ## Configuration contract
 
-The Phase 3 implementation is expected to introduce configuration equivalent
-to:
+Phase 3B consumes this configuration:
 
 ```text
 AWS_REGION=ap-northeast-1
 AWS_ORIGINALS_BUCKET=
-AWS_WEB_BUCKET=
 PHOTO_CDN_BASE_URL=
 AWS_UPLOAD_URL_TTL_SECONDS=900
 ```
@@ -343,11 +347,12 @@ burden.
 Phase 2    Current MySQL and private-admin baseline
 Phase 2.5  Product, architecture, and decision documentation
 Phase 3A   Current S3, IAM, CloudFront, and processor placeholder infrastructure
-Phase 3B   Authenticated direct batch upload
+Phase 3B   Current authenticated direct batch upload
 Phase 3C   Idempotent image processing and status reconciliation
 Phase 3D   Retry, deletion, recovery, and real-workflow validation
 Phase 4    Production compute, database, domain, backups, and monitoring
 ```
 
-Phase 3 acceptance must include real batches of 10, 20, and 30 representative
-film scans, not only small JPEG fixtures.
+Phase 3B has a verified single-file real AWS path. Full Phase 3 acceptance must
+still include real batches of 10, 20, and 30 representative film scans, not only
+small JPEG fixtures.

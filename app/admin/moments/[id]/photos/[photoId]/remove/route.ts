@@ -1,5 +1,5 @@
 import type { NextRequest } from "next/server";
-import { removePhoto } from "@/database/moments";
+import { PhotoRemovalError, removePhoto } from "@/database/moments";
 import { AdminInputError, parseRecordId } from "@/lib/admin-validation";
 import { adminMutationGuard, redirectWithNotice } from "@/lib/admin-session";
 
@@ -23,7 +23,9 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     if (!removed) throw new AdminInputError("Photo not found.");
     return redirectWithNotice(request, `/admin/moments/${id}`, "notice", "Photo record removed.");
   } catch (error) {
-    const message = error instanceof AdminInputError ? error.message : "Could not remove photo.";
+    const message = error instanceof AdminInputError || error instanceof PhotoRemovalError
+      ? error.message
+      : "Could not remove photo.";
     return redirectWithNotice(request, destination, "error", message);
   }
 }

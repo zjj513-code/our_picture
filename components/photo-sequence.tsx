@@ -32,18 +32,18 @@ export function PhotoSequence({ photos, priority = false }: PhotoSequenceProps) 
           {spread.photos.map((photo, photoIndex) => (
             <figure key={photo.id} className="photo-frame">
               <picture>
-                {photo.thumbnailKey ? (
+                {photo.thumbnailUrl ? (
                   <source
                     media="(max-width: 820px)"
-                    srcSet={`${photo.thumbnailKey} 768w, ${photo.webKey} 1536w`}
+                    srcSet={`${photo.thumbnailUrl} 768w, ${photo.webUrl} 1536w`}
                     sizes="calc(100vw - 32px)"
                   />
                 ) : null}
                 <img
-                  src={photo.webKey}
+                  src={photo.webUrl}
                   srcSet={
-                    photo.thumbnailKey
-                      ? `${photo.thumbnailKey} 768w, ${photo.webKey} 1536w`
+                    photo.thumbnailUrl
+                      ? `${photo.thumbnailUrl} 768w, ${photo.webUrl} 1536w`
                       : undefined
                   }
                   sizes={
@@ -53,8 +53,8 @@ export function PhotoSequence({ photos, priority = false }: PhotoSequenceProps) 
                         ? "(max-width: 820px) calc(100vw - 32px), 760px"
                         : "(max-width: 820px) calc(100vw - 32px), 960px"
                   }
-                  width={photo.width}
-                  height={photo.height}
+                  width={photo.width ?? 1536}
+                  height={photo.height ?? 1024}
                   alt={photo.altText ?? ""}
                   loading={
                     priority && spreadIndex === 0 && photoIndex === 0

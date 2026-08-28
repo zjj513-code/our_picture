@@ -18,6 +18,8 @@
     "admin:create": "tsx --env-file=.env.local scripts/create-admin.ts"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1120.0",
+    "@aws-sdk/s3-request-presigner": "^3.1120.0",
     "argon2": "0.44.0",
     "drizzle-orm": "0.45.2",
     "mysql2": "3.15.3",

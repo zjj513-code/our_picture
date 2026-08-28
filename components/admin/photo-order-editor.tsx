@@ -2,11 +2,16 @@
 
 import { useState } from "react";
 import Image from "next/image";
+import type { PhotoStatus } from "@/lib/types";
 
 type AdminPhotoItem = {
   id: string;
-  thumbnailKey: string | null;
+  thumbnailUrl: string | null;
   webKey: string;
+  webUrl: string;
+  filename: string | null;
+  status: PhotoStatus;
+  error: string | null;
 };
 
 type PhotoOrderEditorProps = {
@@ -61,17 +66,22 @@ export function PhotoOrderEditor({ momentId, initialPhotos }: PhotoOrderEditorPr
             onDragOver={(event) => event.preventDefault()}
             onDrop={() => dropBefore(photo.id)}
           >
-            <Image
-              className="admin-photo-thumb"
-              src={photo.thumbnailKey ?? photo.webKey}
-              width={112}
-              height={75}
-              alt=""
-              unoptimized
-            />
+            {photo.status === "ready" ? (
+              <Image
+                className="admin-photo-thumb"
+                src={photo.thumbnailUrl ?? photo.webUrl}
+                width={112}
+                height={75}
+                alt=""
+                unoptimized
+              />
+            ) : (
+              <div className="admin-photo-placeholder" aria-hidden="true">{photo.status}</div>
+            )}
             <div className="admin-photo-meta">
-              <strong>{photo.webKey}</strong>
-              Order {index + 1}
+              <strong>{photo.filename ?? photo.webKey}</strong>
+              Order {index + 1} · {photo.status}
+              {photo.error ? <span className="admin-photo-error">{photo.error}</span> : null}
             </div>
             <div className="admin-photo-controls">
               <button

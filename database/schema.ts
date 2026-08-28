@@ -44,8 +44,17 @@ export const photos = mysqlTable(
     originalKey: varchar("original_key", { length: 512 }).notNull(),
     webKey: varchar("web_key", { length: 512 }).notNull(),
     thumbnailKey: varchar("thumbnail_key", { length: 512 }),
-    width: int("width", { unsigned: true }).notNull(),
-    height: int("height", { unsigned: true }).notNull(),
+    originalFilename: varchar("original_filename", { length: 255 }),
+    originalContentType: varchar("original_content_type", { length: 100 }),
+    originalByteSize: int("original_byte_size", { unsigned: true }),
+    checksum: char("checksum", { length: 44 }),
+    status: mysqlEnum("status", ["pending", "processing", "ready", "failed"])
+      .notNull()
+      .default("ready"),
+    processingError: text("processing_error"),
+    processedAt: datetime("processed_at", { mode: "string", fsp: 3 }),
+    width: int("width", { unsigned: true }),
+    height: int("height", { unsigned: true }),
     altText: varchar("alt_text", { length: 500 }),
     sortOrder: int("sort_order", { unsigned: true }).notNull(),
     createdAt: timestamp("created_at", { mode: "string" })
@@ -55,6 +64,11 @@ export const photos = mysqlTable(
   (table) => [
     uniqueIndex("uq_photos_moment_sort_order").on(
       table.momentId,
+      table.sortOrder,
+    ),
+    index("idx_photos_moment_status_sort").on(
+      table.momentId,
+      table.status,
       table.sortOrder,
     ),
   ],

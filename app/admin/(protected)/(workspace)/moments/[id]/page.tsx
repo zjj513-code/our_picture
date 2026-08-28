@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { getMomentById } from "@/database/moments";
 import { MomentForm } from "@/components/admin/moment-form";
 import { PhotoOrderEditor } from "@/components/admin/photo-order-editor";
+import { PhotoUploadPanel } from "@/components/admin/photo-upload-panel";
 import { requireAdminPage } from "@/lib/admin-session";
 import { parseRecordId } from "@/lib/admin-validation";
 
@@ -64,15 +65,29 @@ export default async function EditMomentPage({ params, searchParams }: EditMomen
 
       <section className="admin-section">
         <h2 className="admin-section-title">Photos</h2>
+        <PhotoUploadPanel momentId={moment.id} />
         {moment.photos.length === 0 ? (
-          <p className="admin-empty">No photos in this draft. Uploads arrive in Phase 3.</p>
+          <p className="admin-empty">No photos in this draft yet.</p>
         ) : (
           <PhotoOrderEditor
+            key={moment.photos.map(({ id, status }) => `${id}:${status}`).join("|")}
             momentId={moment.id}
-            initialPhotos={moment.photos.map(({ id, thumbnailKey, webKey }) => ({
+            initialPhotos={moment.photos.map(({
               id,
-              thumbnailKey,
+              thumbnailUrl,
               webKey,
+              webUrl,
+              originalFilename,
+              status,
+              processingError,
+            }) => ({
+              id,
+              thumbnailUrl,
+              webKey,
+              webUrl,
+              filename: originalFilename,
+              status,
+              error: processingError,
             }))}
           />
         )}
@@ -80,7 +95,7 @@ export default async function EditMomentPage({ params, searchParams }: EditMomen
 
       <section className="admin-section">
         <h2 className="admin-section-title">Delete Moment</h2>
-        <p className="admin-copy">This deletes the Moment and its Photo records. Local sample files are kept.</p>
+        <p className="admin-copy">This deletes the Moment and its Photo records. Local files and remote S3 objects are kept.</p>
         <form action={`/admin/moments/${moment.id}/delete`} method="post">
           <label className="admin-confirm">
             <input type="checkbox" name="confirm" value="yes" required />
