@@ -16,11 +16,11 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     destination = `/admin/moments/${id}`;
     const order = parsePhotoOrder(await request.formData());
     await reorderPhotos(id, order);
-    return redirectWithNotice(request, `/admin/moments/${id}`, "notice", "Photo order saved.");
+    return redirectWithNotice(request, `/admin/moments/${id}`, "notice", "照片顺序已保存。");
   } catch (error) {
     const message = error instanceof AdminInputError || error instanceof PhotoOrderError
       ? error.message
-      : "Could not reorder photos.";
+      : "无法调整照片顺序。";
     return redirectWithNotice(request, destination, "error", message);
   }
 }

@@ -38,7 +38,7 @@ export async function reconcileMomentProcessingResults(
       outcomes.push({
         photoId: photo.id,
         status: photo.status,
-        error: "Processing status could not be refreshed.",
+        error: "无法刷新图片处理状态。",
       });
     }
   });

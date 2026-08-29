@@ -21,6 +21,6 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
       return NextResponse.json({ error: error.message }, { status: 400 });
     }
     console.error("Moment reconciliation failed", error);
-    return NextResponse.json({ error: "Could not refresh processing status." }, { status: 502 });
+    return NextResponse.json({ error: "无法刷新图片处理状态。" }, { status: 502 });
   }
 }

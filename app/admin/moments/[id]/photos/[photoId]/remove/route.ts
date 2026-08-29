@@ -17,15 +17,15 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     const photoId = parseRecordId(rawPhotoId);
     const formData = await request.formData();
     if (formData.get("confirm") !== "yes") {
-      throw new AdminInputError("Photo removal was not confirmed.");
+      throw new AdminInputError("请先确认移除照片。");
     }
     const removed = await removePhoto(id, photoId);
-    if (!removed) throw new AdminInputError("Photo not found.");
-    return redirectWithNotice(request, `/admin/moments/${id}`, "notice", "Photo record removed.");
+    if (!removed) throw new AdminInputError("找不到这张照片。");
+    return redirectWithNotice(request, `/admin/moments/${id}`, "notice", "照片记录已移除。");
   } catch (error) {
     const message = error instanceof AdminInputError || error instanceof PhotoRemovalError
       ? error.message
-      : "Could not remove photo.";
+      : "无法移除照片。";
     return redirectWithNotice(request, destination, "error", message);
   }
 }

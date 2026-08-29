@@ -108,7 +108,7 @@ export async function setMomentStatus(
       .where(and(eq(photos.momentId, id), eq(photos.status, "ready")));
     if ((ready[0]?.count ?? 0) === 0) {
       throw new MomentPublicationError(
-        "A Moment needs at least one ready photo before it can be published.",
+        "至少需要一张处理完成的照片才能发布记录。",
       );
     }
   }
@@ -151,7 +151,7 @@ export async function reorderPhotos(
       orderedPhotoIds.some((id) => !existingIds.includes(id))
     ) {
       throw new PhotoOrderError(
-        "Photo order must contain every photo exactly once.",
+        "照片顺序必须包含全部照片，且每张只能出现一次。",
       );
     }
     const temporaryBase =
@@ -194,7 +194,7 @@ export async function removePhoto(
         .where(and(eq(photos.momentId, momentId), eq(photos.status, "ready")));
       if ((ready[0]?.count ?? 0) <= 1) {
         throw new PhotoRemovalError(
-          "Return this Moment to draft before removing its last ready photo.",
+          "请先将记录转回草稿，再移除最后一张已就绪的照片。",
         );
       }
     }

@@ -12,7 +12,7 @@ import { adminRedirectUrl, hasValidOrigin } from "@/lib/admin-session";
 
 export async function POST(request: NextRequest) {
   if (!hasValidOrigin(request)) {
-    return NextResponse.json({ error: "Invalid request origin." }, { status: 403 });
+    return NextResponse.json({ error: "请求来源无效。" }, { status: 403 });
   }
 
   const formData = await request.formData();
@@ -44,6 +44,6 @@ export async function POST(request: NextRequest) {
 
 function invalidLogin(request: NextRequest) {
   const destination = adminRedirectUrl(request, "/admin/login");
-  destination.searchParams.set("error", "Invalid username or password.");
+  destination.searchParams.set("error", "账号或密码错误。");
   return NextResponse.redirect(destination, 303);
 }

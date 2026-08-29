@@ -9,7 +9,7 @@ export function parseMomentForm(formData: FormData): MomentInput {
   const caption = optionalText(formData, "caption", 10_000);
 
   if (!isCalendarDate(date)) {
-    throw new AdminInputError("Choose a valid calendar date.");
+    throw new AdminInputError("请选择有效的日期。");
   }
 
   return { date, title, location, caption };
@@ -17,7 +17,7 @@ export function parseMomentForm(formData: FormData): MomentInput {
 
 export function parseRecordId(value: string): string {
   if (!/^[A-Za-z0-9-]{1,36}$/.test(value)) {
-    throw new AdminInputError("Invalid record identifier.");
+    throw new AdminInputError("记录标识无效。");
   }
   return value;
 }
@@ -28,26 +28,26 @@ export function parsePhotoOrder(formData: FormData): string[] {
   try {
     parsed = JSON.parse(raw);
   } catch {
-    throw new AdminInputError("Invalid photo order.");
+    throw new AdminInputError("照片顺序无效。");
   }
   if (
     !Array.isArray(parsed) ||
     parsed.length > 30 ||
     parsed.some((value) => typeof value !== "string")
   ) {
-    throw new AdminInputError("Invalid photo order.");
+    throw new AdminInputError("照片顺序无效。");
   }
   return parsed.map(parseRecordId);
 }
 
 export function parseUsername(value: unknown): string {
   if (typeof value !== "string") {
-    throw new AdminInputError("Username is required.");
+    throw new AdminInputError("账号不能为空。");
   }
   const username = value.trim().toLowerCase();
   if (!/^[a-z0-9._-]{3,64}$/.test(username)) {
     throw new AdminInputError(
-      "Username must be 3–64 lowercase letters, numbers, dots, dashes, or underscores.",
+      "账号必须为 3–64 个小写字母、数字、点、短横线或下划线。",
     );
   }
   return username;
@@ -55,7 +55,7 @@ export function parseUsername(value: unknown): string {
 
 export function parseNewPassword(value: unknown): string {
   if (typeof value !== "string" || value.length < 12 || value.length > 200) {
-    throw new AdminInputError("Password must be between 12 and 200 characters.");
+    throw new AdminInputError("密码长度必须为 12–200 个字符。");
   }
   return value;
 }
@@ -63,7 +63,7 @@ export function parseNewPassword(value: unknown): string {
 function textValue(formData: FormData, key: string): string {
   const value = formData.get(key);
   if (typeof value !== "string") {
-    throw new AdminInputError(`${key} is required.`);
+    throw new AdminInputError(`${fieldLabel(key)}不能为空。`);
   }
   return value.trim();
 }
@@ -75,9 +75,19 @@ function optionalText(
 ): string | null {
   const value = textValue(formData, key);
   if (value.length > maxLength) {
-    throw new AdminInputError(`${key} is too long.`);
+    throw new AdminInputError(`${fieldLabel(key)}过长。`);
   }
   return value || null;
+}
+
+function fieldLabel(key: string): string {
+  return {
+    date: "日期",
+    title: "标题",
+    location: "地点",
+    caption: "说明",
+    order: "照片顺序",
+  }[key] ?? "此字段";
 }
 
 function isCalendarDate(value: string): boolean {

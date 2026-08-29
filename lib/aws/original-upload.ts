@@ -72,13 +72,13 @@ export async function verifyOriginalUpload(
     }),
   );
   if (object.ContentLength !== descriptor.byteSize) {
-    throw new UploadVerificationError("Stored object size does not match the signed upload.");
+    throw new UploadVerificationError("S3 中的文件大小与所选文件不一致。");
   }
   if (object.ContentType?.toLowerCase() !== descriptor.contentType) {
-    throw new UploadVerificationError("Stored media type does not match the signed upload.");
+    throw new UploadVerificationError("S3 中的媒体类型与所选文件不一致。");
   }
   if (object.ChecksumSHA256 !== descriptor.checksum) {
-    throw new UploadVerificationError("Stored checksum does not match the selected file.");
+    throw new UploadVerificationError("S3 中的校验值与所选文件不一致。");
   }
 }
 

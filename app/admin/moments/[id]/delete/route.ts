@@ -16,13 +16,13 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     destination = `/admin/moments/${id}`;
     const formData = await request.formData();
     if (formData.get("confirm") !== "yes") {
-      throw new AdminInputError("Deletion was not confirmed.");
+      throw new AdminInputError("请先确认删除操作。");
     }
     const deleted = await deleteMoment(id);
-    if (!deleted) throw new AdminInputError("Moment not found.");
-    return redirectWithNotice(request, "/admin", "notice", "Moment deleted.");
+    if (!deleted) throw new AdminInputError("找不到这条记录。");
+    return redirectWithNotice(request, "/admin", "notice", "记录已删除。");
   } catch (error) {
-    const message = error instanceof AdminInputError ? error.message : "Could not delete Moment.";
+    const message = error instanceof AdminInputError ? error.message : "无法删除记录。";
     return redirectWithNotice(request, destination, "error", message);
   }
 }

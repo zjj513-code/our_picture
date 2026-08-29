@@ -18,7 +18,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     const momentId = parseRecordId(rawId);
     const photoId = parseRecordId(rawPhotoId);
     let photo = await getPhotoUpload(momentId, photoId);
-    if (!photo) return NextResponse.json({ error: "Photo not found." }, { status: 404 });
+    if (!photo) return NextResponse.json({ error: "找不到这张照片。" }, { status: 404 });
     if (photo.status === "processing" || photo.status === "ready") {
       return NextResponse.json({ photoId, status: photo.status });
     }
@@ -27,10 +27,10 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
       photo = await getPhotoUpload(momentId, photoId);
     }
     if (photo?.status !== "pending") {
-      return NextResponse.json({ error: "Only pending or failed uploads can be retried." }, { status: 409 });
+      return NextResponse.json({ error: "只能重试等待上传或上传失败的照片。" }, { status: 409 });
     }
     if (!photo.originalContentType || !photo.originalByteSize || !photo.checksum) {
-      return NextResponse.json({ error: "Photo upload metadata is incomplete." }, { status: 409 });
+      return NextResponse.json({ error: "照片上传信息不完整。" }, { status: 409 });
     }
     const upload = await signOriginalUpload({
       key: photo.originalKey,
@@ -44,6 +44,6 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
       return NextResponse.json({ error: error.message }, { status: 400 });
     }
     console.error("Upload retry failed", error);
-    return NextResponse.json({ error: "Could not refresh the upload URL." }, { status: 503 });
+    return NextResponse.json({ error: "无法刷新上传地址。" }, { status: 503 });
   }
 }

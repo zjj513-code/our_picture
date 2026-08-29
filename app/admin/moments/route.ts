@@ -9,9 +9,9 @@ export async function POST(request: NextRequest) {
 
   try {
     const id = await createMoment(parseMomentForm(await request.formData()));
-    return redirectWithNotice(request, `/admin/moments/${id}`, "notice", "Moment created.");
+    return redirectWithNotice(request, `/admin/moments/${id}`, "notice", "记录已创建。");
   } catch (error) {
-    const message = error instanceof AdminInputError ? error.message : "Could not create Moment.";
+    const message = error instanceof AdminInputError ? error.message : "无法创建记录。";
     return redirectWithNotice(request, "/admin/moments/new", "error", message);
   }
 }

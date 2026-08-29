@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Image from "next/image";
+import { photoProcessingErrorLabel, photoStatusLabel } from "@/lib/admin-labels";
 import type { PhotoStatus } from "@/lib/types";
 
 type AdminPhotoItem = {
@@ -76,12 +77,16 @@ export function PhotoOrderEditor({ momentId, initialPhotos }: PhotoOrderEditorPr
                 unoptimized
               />
             ) : (
-              <div className="admin-photo-placeholder" aria-hidden="true">{photo.status}</div>
+              <div className="admin-photo-placeholder" aria-hidden="true">
+                {photoStatusLabel(photo.status)}
+              </div>
             )}
             <div className="admin-photo-meta">
               <strong>{photo.filename ?? photo.webKey}</strong>
-              Order {index + 1} · {photo.status}
-              {photo.error ? <span className="admin-photo-error">{photo.error}</span> : null}
+              顺序 {index + 1} · {photoStatusLabel(photo.status)}
+              {photo.error ? (
+                <span className="admin-photo-error">{photoProcessingErrorLabel(photo.error)}</span>
+              ) : null}
             </div>
             <div className="admin-photo-controls">
               <button
@@ -89,18 +94,18 @@ export function PhotoOrderEditor({ momentId, initialPhotos }: PhotoOrderEditorPr
                 type="button"
                 disabled={index === 0}
                 onClick={() => move(index, index - 1)}
-                aria-label={`Move photo ${index + 1} up`}
+                aria-label={`将第 ${index + 1} 张照片上移`}
               >
-                Up
+                上移
               </button>
               <button
                 className="admin-button"
                 type="button"
                 disabled={index === orderedPhotos.length - 1}
                 onClick={() => move(index, index + 1)}
-                aria-label={`Move photo ${index + 1} down`}
+                aria-label={`将第 ${index + 1} 张照片下移`}
               >
-                Down
+                下移
               </button>
               <button
                 className="admin-button admin-button--danger"
@@ -110,7 +115,7 @@ export function PhotoOrderEditor({ momentId, initialPhotos }: PhotoOrderEditorPr
                 name="confirm"
                 value="yes"
               >
-                Remove
+                移除
               </button>
             </div>
           </li>
@@ -118,7 +123,7 @@ export function PhotoOrderEditor({ momentId, initialPhotos }: PhotoOrderEditorPr
       </ol>
       <div className="admin-form-actions">
         <button className="admin-button admin-button--primary" type="submit">
-          Save photo order
+          保存照片顺序
         </button>
       </div>
     </form>

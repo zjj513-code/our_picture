@@ -1,7 +1,11 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { getCurrentAdmin } from "@/lib/admin-session";
 
 export const dynamic = "force-dynamic";
+export const metadata: Metadata = {
+  title: "后台登录 | Our Pictures",
+};
 
 type LoginPageProps = {
   searchParams: Promise<{ error?: string }>;
@@ -12,14 +16,14 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   const { error } = await searchParams;
 
   return (
-    <main className="admin-login">
+    <main className="admin-login" lang="zh-CN">
       <div className="admin-login-inner">
-        <h1 className="admin-title">Admin sign in</h1>
+        <h1 className="admin-title">后台登录</h1>
         {error ? <p className="admin-error">{error}</p> : null}
         <form action="/admin/auth/login" method="post">
           <div className="admin-field">
             <label className="admin-label" htmlFor="username">
-              Username
+              账号
             </label>
             <input
               className="admin-input"
@@ -33,7 +37,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
           </div>
           <div className="admin-field">
             <label className="admin-label" htmlFor="password">
-              Password
+              密码
             </label>
             <input
               className="admin-input"
@@ -46,7 +50,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
             />
           </div>
           <button className="admin-button admin-button--primary" type="submit">
-            Sign in
+            登录
           </button>
         </form>
       </div>

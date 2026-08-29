@@ -15,10 +15,10 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     const id = parseRecordId(rawId);
     destination = `/admin/moments/${id}`;
     const updated = await updateMoment(id, parseMomentForm(await request.formData()));
-    if (!updated) throw new AdminInputError("Moment not found.");
-    return redirectWithNotice(request, `/admin/moments/${id}`, "notice", "Metadata saved.");
+    if (!updated) throw new AdminInputError("找不到这条记录。");
+    return redirectWithNotice(request, `/admin/moments/${id}`, "notice", "基本信息已保存。");
   } catch (error) {
-    const message = error instanceof AdminInputError ? error.message : "Could not save Moment.";
+    const message = error instanceof AdminInputError ? error.message : "无法保存记录。";
     return redirectWithNotice(request, destination, "error", message);
   }
 }

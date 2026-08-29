@@ -7,16 +7,16 @@ export default async function AdminWorkspaceLayout({
   const admin = await requireAdminPage();
 
   return (
-    <div className="admin-app">
+    <div className="admin-app" lang="zh-CN">
       <header className="admin-header">
         <Link className="admin-brand" href="/admin">
-          Our Pictures / Admin
+          Our Pictures / 管理后台
         </Link>
         <div className="admin-header-actions">
           <span className="admin-username">{admin.username}</span>
           <form action="/admin/auth/logout" method="post">
             <button className="admin-button admin-button--quiet" type="submit">
-              Log out
+              退出登录
             </button>
           </form>
         </div>

@@ -45,7 +45,7 @@ development S3, Lambda, CloudFront, ECR, and EC2 resources described in
 | EC2 host | `i-0a17fa9e55bd0fae2` (`t4g.small`, arm64) |
 | Host security group | `sg-0aee773187e07fe63` |
 | Web ECR repository | `our-pictures-dev-web` |
-| Web image tag | `phase4-redirect-fix-20260828` |
+| Web image tag | `admin-zh-20260829-01` |
 | EC2 instance profile | `OurPicturesDevWebHostProfile` |
 
 The generated CloudFront distribution ID, domain, and OAC ID are recorded in

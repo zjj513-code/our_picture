@@ -27,15 +27,15 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     momentId = parseRecordId(resolved.id);
     photoId = parseRecordId(resolved.photoId);
     const photo = await getPhotoUpload(momentId, photoId);
-    if (!photo) return NextResponse.json({ error: "Photo not found." }, { status: 404 });
+    if (!photo) return NextResponse.json({ error: "找不到这张照片。" }, { status: 404 });
     if (photo.status === "processing" || photo.status === "ready") {
       return NextResponse.json({ photoId, status: photo.status });
     }
     if (photo.status !== "pending") {
-      return NextResponse.json({ error: "Retry this failed upload before completing it." }, { status: 409 });
+      return NextResponse.json({ error: "请先重新上传失败的文件，再完成校验。" }, { status: 409 });
     }
     if (!photo.originalContentType || !photo.originalByteSize || !photo.checksum) {
-      return NextResponse.json({ error: "Photo upload metadata is incomplete." }, { status: 409 });
+      return NextResponse.json({ error: "照片上传信息不完整。" }, { status: 409 });
     }
     await verifyOriginalUpload({
       key: photo.originalKey,
@@ -44,7 +44,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
       checksum: photo.checksum,
     });
     const changed = await markPhotoProcessing(momentId, photoId);
-    if (!changed) return NextResponse.json({ error: "Photo state changed; refresh and try again." }, { status: 409 });
+    if (!changed) return NextResponse.json({ error: "照片状态已变化，请刷新后重试。" }, { status: 409 });
     return NextResponse.json({ photoId, status: "processing" });
   } catch (error) {
     if (error instanceof AdminInputError) {
@@ -55,6 +55,6 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
       return NextResponse.json({ error: error.message }, { status: 422 });
     }
     console.error("Upload completion verification failed", error);
-    return NextResponse.json({ error: "Could not verify the uploaded object." }, { status: 502 });
+    return NextResponse.json({ error: "无法校验已上传的文件。" }, { status: 502 });
   }
 }

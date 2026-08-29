@@ -5,6 +5,7 @@ import { reconcileMomentProcessingResults } from "@/database/photo-processing";
 import { MomentForm } from "@/components/admin/moment-form";
 import { PhotoOrderEditor } from "@/components/admin/photo-order-editor";
 import { PhotoUploadPanel } from "@/components/admin/photo-upload-panel";
+import { momentStatusLabel } from "@/lib/admin-labels";
 import { requireAdminPage } from "@/lib/admin-session";
 import { parseRecordId } from "@/lib/admin-validation";
 
@@ -31,14 +32,16 @@ export default async function EditMomentPage({ params, searchParams }: EditMomen
     <>
       <div className="admin-heading-row">
         <div>
-          <h1 className="admin-title">Edit Moment</h1>
-          <p className="admin-subtitle">{moment.date} · {moment.status}</p>
+          <h1 className="admin-title">编辑记录</h1>
+          <p className="admin-subtitle">
+            {moment.date} · {momentStatusLabel(moment.status)}
+          </p>
         </div>
         <div className="admin-actions">
           <Link className="admin-link-button" href={`/admin/moments/${moment.id}/preview`}>
-            Preview
+            预览
           </Link>
-          <Link className="admin-link-button" href="/admin">Back</Link>
+          <Link className="admin-link-button" href="/admin">返回</Link>
         </div>
       </div>
       {error ? <p className="admin-error">{error}</p> : null}
@@ -47,29 +50,29 @@ export default async function EditMomentPage({ params, searchParams }: EditMomen
       <MomentForm
         action={`/admin/moments/${moment.id}/update`}
         moment={moment}
-        submitLabel="Save metadata"
+        submitLabel="保存基本信息"
       />
 
       <section className="admin-section">
-        <h2 className="admin-section-title">Publication</h2>
+        <h2 className="admin-section-title">发布状态</h2>
         <p className="admin-copy">
           {moment.status === "published"
-            ? "This Moment is visible on the public homepage."
-            : "This draft is visible only in the admin preview."}
+            ? "这条记录已显示在公开首页。"
+            : "这条草稿只会显示在管理后台的预览中。"}
         </p>
         <form className="admin-form-actions" action={`/admin/moments/${moment.id}/status`} method="post">
           <input type="hidden" name="status" value={moment.status === "published" ? "draft" : "published"} />
           <button className="admin-button" type="submit">
-            {moment.status === "published" ? "Return to draft" : "Publish Moment"}
+            {moment.status === "published" ? "转回草稿" : "发布记录"}
           </button>
         </form>
       </section>
 
       <section className="admin-section">
-        <h2 className="admin-section-title">Photos</h2>
+        <h2 className="admin-section-title">照片</h2>
         <PhotoUploadPanel momentId={moment.id} />
         {moment.photos.length === 0 ? (
-          <p className="admin-empty">No photos in this draft yet.</p>
+          <p className="admin-empty">这条草稿中还没有照片。</p>
         ) : (
           <PhotoOrderEditor
             key={moment.photos.map(({ id, status }) => `${id}:${status}`).join("|")}
@@ -96,15 +99,17 @@ export default async function EditMomentPage({ params, searchParams }: EditMomen
       </section>
 
       <section className="admin-section">
-        <h2 className="admin-section-title">Delete Moment</h2>
-        <p className="admin-copy">This deletes the Moment and its Photo records. Local files and remote S3 objects are kept.</p>
+        <h2 className="admin-section-title">删除记录</h2>
+        <p className="admin-copy">
+          这里只会删除数据库中的记录和照片信息，本地文件与远程 S3 对象会保留。
+        </p>
         <form action={`/admin/moments/${moment.id}/delete`} method="post">
           <label className="admin-confirm">
             <input type="checkbox" name="confirm" value="yes" required />
-            I understand that this database deletion cannot be undone.
+            我明白数据库中的删除操作无法撤销。
           </label>
           <button className="admin-button admin-button--danger" type="submit">
-            Delete Moment
+            删除记录
           </button>
         </form>
       </section>

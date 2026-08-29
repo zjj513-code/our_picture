@@ -13,13 +13,13 @@ export default async function NewMomentPage({ searchParams }: NewMomentPageProps
     <>
       <div className="admin-heading-row">
         <div>
-          <h1 className="admin-title">New Moment</h1>
-          <p className="admin-subtitle">New Moments begin as drafts and may contain zero photos.</p>
+          <h1 className="admin-title">新建记录</h1>
+          <p className="admin-subtitle">新记录会先保存为草稿，可以暂时不添加照片。</p>
         </div>
-        <Link className="admin-link-button" href="/admin">Back</Link>
+        <Link className="admin-link-button" href="/admin">返回</Link>
       </div>
       {error ? <p className="admin-error">{error}</p> : null}
-      <MomentForm action="/admin/moments" submitLabel="Create Moment" />
+      <MomentForm action="/admin/moments" submitLabel="创建记录" />
     </>
   );
 }

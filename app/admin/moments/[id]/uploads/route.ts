@@ -24,12 +24,12 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     const { id: rawId } = await params;
     const momentId = parseRecordId(rawId);
     if (!request.headers.get("content-type")?.startsWith("application/json")) {
-      throw new AdminInputError("Upload metadata must be JSON.");
+      throw new AdminInputError("上传信息必须使用 JSON 格式。");
     }
     const files = parseUploadBatch(await request.json());
     getOriginalUploadConfig();
     const pending = await createPendingPhotoUploads(momentId, files);
-    if (!pending) return NextResponse.json({ error: "Moment not found." }, { status: 404 });
+    if (!pending) return NextResponse.json({ error: "找不到这条记录。" }, { status: 404 });
 
     const uploads = await Promise.all(
       pending.map(async (file) => {
@@ -42,7 +42,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
           });
           return { clientId: file.clientId, photoId: file.photoId, upload };
         } catch {
-          const error = "Could not create an S3 upload URL.";
+          const error = "无法创建 S3 上传地址。";
           await markPhotoFailed(momentId, file.photoId, error);
           return { clientId: file.clientId, photoId: file.photoId, error };
         }
@@ -52,11 +52,11 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
   } catch (error) {
     if (error instanceof AdminInputError || error instanceof SyntaxError) {
       return NextResponse.json(
-        { error: error instanceof AdminInputError ? error.message : "Invalid JSON body." },
+        { error: error instanceof AdminInputError ? error.message : "JSON 请求内容无效。" },
         { status: 400 },
       );
     }
     console.error("Upload initialization failed", error);
-    return NextResponse.json({ error: "Upload service is not configured or available." }, { status: 503 });
+    return NextResponse.json({ error: "上传服务尚未配置或暂时不可用。" }, { status: 503 });
   }
 }

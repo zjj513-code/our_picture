@@ -11,7 +11,7 @@ export function MomentForm({ action, moment, submitLabel }: MomentFormProps) {
     <form className="admin-form" action={action} method="post">
       <div className="admin-field-grid">
         <div className="admin-field">
-          <label className="admin-label" htmlFor="date">Date</label>
+          <label className="admin-label" htmlFor="date">日期</label>
           <input
             className="admin-input"
             id="date"
@@ -22,7 +22,7 @@ export function MomentForm({ action, moment, submitLabel }: MomentFormProps) {
           />
         </div>
         <div className="admin-field">
-          <label className="admin-label" htmlFor="location">Location</label>
+          <label className="admin-label" htmlFor="location">地点</label>
           <input
             className="admin-input"
             id="location"
@@ -33,7 +33,7 @@ export function MomentForm({ action, moment, submitLabel }: MomentFormProps) {
           />
         </div>
         <div className="admin-field admin-field--full">
-          <label className="admin-label" htmlFor="title">Title</label>
+          <label className="admin-label" htmlFor="title">标题</label>
           <input
             className="admin-input"
             id="title"
@@ -44,7 +44,7 @@ export function MomentForm({ action, moment, submitLabel }: MomentFormProps) {
           />
         </div>
         <div className="admin-field admin-field--full">
-          <label className="admin-label" htmlFor="caption">Caption</label>
+          <label className="admin-label" htmlFor="caption">说明</label>
           <textarea
             className="admin-textarea"
             id="caption"

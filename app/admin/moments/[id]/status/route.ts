@@ -18,20 +18,20 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     const formData = await request.formData();
     const status = formData.get("status");
     if (status !== "draft" && status !== "published") {
-      throw new AdminInputError("Invalid publication status.");
+      throw new AdminInputError("发布状态无效。");
     }
     const updated = await setMomentStatus(id, status as MomentStatus);
-    if (!updated) throw new AdminInputError("Moment not found.");
+    if (!updated) throw new AdminInputError("找不到这条记录。");
     return redirectWithNotice(
       request,
       `/admin/moments/${id}`,
       "notice",
-      status === "published" ? "Moment published." : "Moment returned to draft.",
+      status === "published" ? "记录已发布。" : "记录已转回草稿。",
     );
   } catch (error) {
     const message = error instanceof AdminInputError || error instanceof MomentPublicationError
       ? error.message
-      : "Could not change status.";
+      : "无法更改发布状态。";
     return redirectWithNotice(request, destination, "error", message);
   }
 }

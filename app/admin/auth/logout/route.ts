@@ -9,7 +9,7 @@ import { adminRedirectUrl, hasValidOrigin } from "@/lib/admin-session";
 
 export async function POST(request: NextRequest) {
   if (!hasValidOrigin(request)) {
-    return NextResponse.json({ error: "Invalid request origin." }, { status: 403 });
+    return NextResponse.json({ error: "请求来源无效。" }, { status: 403 });
   }
 
   await revokeSessionToken(request.cookies.get(SESSION_COOKIE_NAME)?.value);

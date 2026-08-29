@@ -305,12 +305,22 @@ async function verifyHttpFlows(username: string, password: string) {
   assert.equal(protectedResponse.status, 307);
   assert.equal(protectedResponse.headers.get("location"), "/admin/login");
 
+  const loginPage = await fetch(`${origin}/admin/login`);
+  const loginHtml = await loginPage.text();
+  assert.match(loginHtml, /后台登录/);
+  assert.match(loginHtml, /账号/);
+  assert.match(loginHtml, /密码/);
+  assert.match(loginHtml, /lang="zh-CN"/);
+
   const failedLogin = await postForm(`${origin}/admin/auth/login`, origin, {
     username,
     password: "wrong password",
   });
   assert.equal(failedLogin.status, 303);
-  assert.match(failedLogin.headers.get("location") ?? "", /error=Invalid/);
+  assert.equal(
+    new URL(failedLogin.headers.get("location") ?? "", origin).searchParams.get("error"),
+    "账号或密码错误。",
+  );
   assert.equal(failedLogin.headers.get("set-cookie"), null);
 
   const successfulLogin = await postForm(`${origin}/admin/auth/login`, origin, {
@@ -325,7 +335,12 @@ async function verifyHttpFlows(username: string, password: string) {
 
   const adminResponse = await fetch(`${origin}/admin`, { headers: { cookie } });
   assert.equal(adminResponse.status, 200);
-  assert.match(await adminResponse.text(), /test-admin/);
+  const adminHtml = await adminResponse.text();
+  assert.match(adminHtml, /test-admin/);
+  assert.match(adminHtml, /影像记录/);
+  assert.match(adminHtml, /新建记录/);
+  assert.match(adminHtml, /草稿|已发布/);
+  assert.doesNotMatch(adminHtml, />Moments<|>New Moment<|>Log out</);
 
   const created = await postForm(
     `${origin}/admin/moments`,
@@ -421,7 +436,7 @@ async function verifyHttpFlows(username: string, password: string) {
     headers: { cookie },
   });
   assert.equal(preview.status, 200);
-  assert.match(await preview.text(), /Private preview/);
+  assert.match(await preview.text(), /私密预览/);
 
   const deleted = await postForm(
     `${origin}/admin/moments/${createdId}/delete`,

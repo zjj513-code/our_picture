@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { photoProcessingErrorLabel } from "@/lib/admin-labels";
 
 type UploadStatus =
   | "queued"
@@ -48,6 +49,7 @@ export function PhotoUploadPanel({ momentId }: { momentId: string }) {
   const [items, setItems] = useState<UploadItem[]>([]);
   const [working, setWorking] = useState(false);
   const [batchError, setBatchError] = useState<string | null>(null);
+  const queuedCount = items.filter(({ status }) => status === "queued").length;
 
   const patchItem = (clientId: string, change: Partial<UploadItem>) => {
     setItems((current) => current.map((item) => item.clientId === clientId ? { ...item, ...change } : item));
@@ -62,7 +64,7 @@ export function PhotoUploadPanel({ momentId }: { momentId: string }) {
       status: "queued",
       progress: 0,
     })));
-    setBatchError(files.length > maxBatchSize ? `Only the first ${maxBatchSize} files were selected.` : null);
+    setBatchError(files.length > maxBatchSize ? `一次最多选择 ${maxBatchSize} 张，已保留前 ${maxBatchSize} 张。` : null);
   };
 
   const startBatch = async () => {
@@ -100,7 +102,7 @@ export function PhotoUploadPanel({ momentId }: { momentId: string }) {
         const source = queuedItems.find(({ clientId }) => clientId === result.clientId);
         if (!source) continue;
         if (!result.upload) {
-          patchItem(result.clientId, { status: "failed", photoId: result.photoId, error: result.error ?? "Upload URL creation failed." });
+          patchItem(result.clientId, { status: "failed", photoId: result.photoId, error: result.error ?? "无法创建上传地址。" });
           continue;
         }
         const prepared = { ...source, photoId: result.photoId, upload: result.upload };
@@ -110,7 +112,7 @@ export function PhotoUploadPanel({ momentId }: { momentId: string }) {
       const returnedIds = new Set(initialized.uploads.map(({ clientId }) => clientId));
       for (const item of queuedItems) {
         if (!returnedIds.has(item.clientId)) {
-          patchItem(item.clientId, { status: "failed", error: "Upload initialization returned no result." });
+          patchItem(item.clientId, { status: "failed", error: "初始化上传后没有收到结果。" });
         }
       }
       const processingItems: Array<{ photoId: string; clientId: string }> = [];
@@ -167,7 +169,10 @@ export function PhotoUploadPanel({ momentId }: { momentId: string }) {
           patchItem(clientId, { status: "ready", progress: 100, error: undefined });
           waiting.delete(photo.photoId);
         } else if (photo.status === "failed") {
-          patchItem(clientId, { status: "failed", error: photo.error ?? "Image processing failed." });
+          patchItem(clientId, {
+            status: "failed",
+            error: photo.error ? photoProcessingErrorLabel(photo.error) : "图片处理失败。",
+          });
           waiting.delete(photo.photoId);
         }
       }
@@ -192,7 +197,7 @@ export function PhotoUploadPanel({ momentId }: { momentId: string }) {
           patchItem(item.clientId, { status: "processing", progress: 100, error: undefined });
           return;
         }
-        if (!retried.upload) throw new Error("Upload URL refresh returned no result.");
+        if (!retried.upload) throw new Error("刷新上传地址后没有收到结果。");
         upload = retried.upload;
       } else {
         patchItem(item.clientId, { status: "hashing", error: undefined });
@@ -208,7 +213,7 @@ export function PhotoUploadPanel({ momentId }: { momentId: string }) {
           }] },
         );
         const result = initialized.uploads[0];
-        if (!result?.upload) throw new Error(result?.error ?? "Upload URL creation failed.");
+        if (!result?.upload) throw new Error(result?.error ?? "无法创建上传地址。");
         photoId = result.photoId;
         upload = result.upload;
       }
@@ -234,12 +239,12 @@ export function PhotoUploadPanel({ momentId }: { momentId: string }) {
   return (
     <div className="admin-upload-panel">
       <p className="admin-copy">
-        Upload up to 30 JPEG, PNG, WebP, or TIFF originals directly to private S3 storage.
-        Each file may be up to 250 MiB.
+        每次最多上传 30 张 JPEG、PNG、WebP 或 TIFF 原图，文件会直接进入私有 S3
+        存储；单张最大 250 MiB。
       </p>
       <div className="admin-upload-actions">
         <label className="admin-link-button admin-upload-picker">
-          Choose photos
+          选择照片
           <input
             ref={inputRef}
             type="file"
@@ -250,10 +255,10 @@ export function PhotoUploadPanel({ momentId }: { momentId: string }) {
           />
         </label>
         <button className="admin-button admin-button--primary" type="button" disabled={working || items.every(({ status }) => status !== "queued")} onClick={startBatch}>
-          {working ? "Uploading…" : `Upload ${items.filter(({ status }) => status === "queued").length || "selected"}`}
+          {working ? "上传中…" : queuedCount > 0 ? `上传 ${queuedCount} 张` : "上传已选照片"}
         </button>
         <button className="admin-button" type="button" disabled={working || items.length === 0} onClick={clear}>
-          Clear
+          清空
         </button>
       </div>
       {batchError ? <p className="admin-error">{batchError}</p> : null}
@@ -265,11 +270,11 @@ export function PhotoUploadPanel({ momentId }: { momentId: string }) {
                 <strong>{item.file.name}</strong>
                 <span>{formatBytes(item.file.size)} · {statusLabel(item)}</span>
               </div>
-              <progress max="100" value={item.progress} aria-label={`${item.file.name} upload progress`} />
+              <progress max="100" value={item.progress} aria-label={`${item.file.name} 的上传进度`} />
               {item.error ? <p>{item.error}</p> : null}
               {item.status === "failed" ? (
                 <button className="admin-button" type="button" disabled={working} onClick={() => retry(item)}>
-                  Retry this file
+                  重新上传此文件
                 </button>
               ) : null}
             </li>
@@ -281,8 +286,8 @@ export function PhotoUploadPanel({ momentId }: { momentId: string }) {
 }
 
 function validateFile(file: File): string | null {
-  if (!allowedTypes.has(file.type)) return "Only JPEG, PNG, WebP, and TIFF images are supported.";
-  if (file.size < 1 || file.size > maxBytes) return "The file must be between 1 byte and 250 MiB.";
+  if (!allowedTypes.has(file.type)) return "仅支持 JPEG、PNG、WebP 和 TIFF 图片。";
+  if (file.size < 1 || file.size > maxBytes) return "单个文件必须在 1 字节到 250 MiB 之间。";
   return null;
 }
 
@@ -298,7 +303,7 @@ async function requestJson<T = unknown>(url: string, body: unknown): Promise<T> 
     body: JSON.stringify(body),
   });
   const payload = await response.json().catch(() => null) as { error?: string } | null;
-  if (!response.ok) throw new Error(payload?.error ?? `Request failed (${response.status}).`);
+  if (!response.ok) throw new Error(payload?.error ?? `请求失败（${response.status}）。`);
   return payload as T;
 }
 
@@ -310,10 +315,10 @@ function putFile(file: File, upload: SignedUpload, onProgress: (progress: number
     xhr.upload.onprogress = (event) => {
       if (event.lengthComputable) onProgress(Math.round((event.loaded / event.total) * 100));
     };
-    xhr.onerror = () => reject(new Error("The direct S3 upload could not be completed."));
+    xhr.onerror = () => reject(new Error("无法完成 S3 直传。"));
     xhr.onload = () => xhr.status >= 200 && xhr.status < 300
       ? resolve()
-      : reject(new Error(`S3 rejected the upload (${xhr.status}).`));
+      : reject(new Error(`S3 拒绝了本次上传（${xhr.status}）。`));
     xhr.send(file);
   });
 }
@@ -330,10 +335,13 @@ async function runWithConcurrency<T>(items: T[], limit: number, worker: (item: T
 }
 
 function statusLabel(item: UploadItem) {
-  if (item.status === "uploading") return `uploading ${item.progress}%`;
-  if (item.status === "processing") return "uploaded · awaiting processing";
-  if (item.status === "ready") return "ready";
-  return item.status;
+  if (item.status === "queued") return "等待上传";
+  if (item.status === "hashing") return "正在计算校验值";
+  if (item.status === "uploading") return `上传中 ${item.progress}%`;
+  if (item.status === "verifying") return "正在校验";
+  if (item.status === "processing") return "已上传 · 等待处理";
+  if (item.status === "ready") return "已就绪";
+  return "失败";
 }
 
 function formatBytes(bytes: number) {
@@ -342,7 +350,7 @@ function formatBytes(bytes: number) {
 }
 
 function errorMessage(error: unknown) {
-  return error instanceof Error ? error.message : "Upload failed.";
+  return error instanceof Error ? error.message : "上传失败。";
 }
 
 function delay(milliseconds: number) {

@@ -24,7 +24,7 @@ export async function adminMutationGuard(
   request: NextRequest,
 ): Promise<NextResponse | null> {
   if (!hasValidOrigin(request)) {
-    return NextResponse.json({ error: "Invalid request origin." }, { status: 403 });
+    return NextResponse.json({ error: "请求来源无效。" }, { status: 403 });
   }
 
   const token = request.cookies.get(SESSION_COOKIE_NAME)?.value;
