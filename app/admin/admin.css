@@ -178,6 +178,16 @@
   font: inherit;
 }
 
+.admin-status-message {
+  min-width: 4em;
+  color: #73736e;
+  font-size: 0.76rem;
+}
+
+.admin-status-message--error {
+  color: #9d3028;
+}
+
 .admin-actions {
   display: flex;
   flex-wrap: wrap;

@@ -7,8 +7,16 @@ import type { MomentStatus } from "@/lib/types";
 type RouteContext = { params: Promise<{ id: string }> };
 
 export async function POST(request: NextRequest, { params }: RouteContext) {
+  const wantsJson = request.headers.get("accept")?.includes("application/json") ?? false;
   const denied = await adminMutationGuard(request);
-  if (denied) return denied;
+  if (denied) {
+    return wantsJson
+      ? Response.json(
+          { error: denied.status === 403 ? "请求来源无效。" : "登录已失效，请刷新页面后重新登录。" },
+          { status: denied.status === 403 ? 403 : 401 },
+        )
+      : denied;
+  }
   const { id: rawId } = await params;
   let destination = "/admin";
 
@@ -22,6 +30,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     }
     const updated = await setMomentStatus(id, status as MomentStatus);
     if (!updated) throw new AdminInputError("找不到这条记录。");
+    if (wantsJson) return Response.json({ status });
     return redirectWithNotice(
       request,
       destination,
@@ -32,6 +41,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     const message = error instanceof AdminInputError || error instanceof MomentPublicationError
       ? error.message
       : "无法更改发布状态。";
+    if (wantsJson) return Response.json({ error: message }, { status: 400 });
     return redirectWithNotice(request, destination, "error", message);
   }
 }

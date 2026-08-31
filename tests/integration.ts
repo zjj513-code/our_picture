@@ -385,6 +385,18 @@ async function verifyHttpFlows(username: string, password: string) {
   assert.match(blockedPublish.headers.get("location") ?? "", /\/admin\?error=/);
   assert.equal((await getMomentById(createdId, client.db))?.status, "draft");
 
+  const blockedPublishJson = await postForm(
+    `${origin}/admin/moments/${createdId}/status`,
+    origin,
+    { status: "published", returnTo: "/admin" },
+    cookie,
+    "application/json",
+  );
+  assert.equal(blockedPublishJson.status, 400);
+  assert.deepEqual(await blockedPublishJson.json(), {
+    error: "至少需要一张处理完成的照片才能发布记录。",
+  });
+
   const invalidUpload = await fetch(`${origin}/admin/moments/${createdId}/uploads`, {
     method: "POST",
     headers: { cookie, origin, "content-type": "application/json" },
@@ -449,8 +461,10 @@ async function verifyHttpFlows(username: string, password: string) {
     origin,
     { status: "published" },
     cookie,
+    "application/json",
   );
-  assert.equal(published.status, 303);
+  assert.equal(published.status, 200);
+  assert.deepEqual(await published.json(), { status: "published" });
   assert.equal((await getMomentById(createdId, client.db))?.status, "published");
 
   const preview = await fetch(`${origin}/admin/moments/${createdId}/preview`, {
@@ -498,11 +512,13 @@ async function postForm(
   origin: string,
   values: Record<string, string>,
   cookie?: string,
+  accept?: string,
 ) {
   const body = new FormData();
   for (const [key, value] of Object.entries(values)) body.set(key, value);
   const headers: Record<string, string> = { origin };
   if (cookie) headers.cookie = cookie;
+  if (accept) headers.accept = accept;
   return fetch(url, { method: "POST", body, headers, redirect: "manual" });
 }
 

@@ -4,7 +4,7 @@ set -euo pipefail
 region="ap-northeast-1"
 account_id="066899195278"
 repository="our-pictures-dev-web"
-image_tag="permanent-delete-20260901-01"
+image_tag="instant-status-20260901-01"
 image_uri="${account_id}.dkr.ecr.${region}.amazonaws.com/${repository}:${image_tag}"
 site_url="https://d1v1mg445zdh54.cloudfront.net"
 parameter_prefix="/our-pictures/dev/hosting"
