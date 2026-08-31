@@ -17,7 +17,7 @@ export default async function AdminIndexPage({ searchParams }: AdminIndexPagePro
       <div className="admin-heading-row">
         <div>
           <h1 className="admin-title">影像记录</h1>
-          <p className="admin-subtitle">创建、检查并发布你们的影像记录。</p>
+          <p className="admin-subtitle">发布影像记录。</p>
         </div>
         <Link className="admin-link-button admin-button--primary" href="/admin/moments/new">
           新建记录

@@ -9,7 +9,7 @@ export default async function AdminWorkspaceLayout({
   return (
     <div className="admin-app" lang="zh-CN">
       <header className="admin-header">
-        <Link className="admin-brand" href="/admin">
+        <Link className="admin-brand" href="/">
           Our Pictures / 管理后台
         </Link>
         <div className="admin-header-actions">

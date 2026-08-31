@@ -339,6 +339,8 @@ async function verifyHttpFlows(username: string, password: string) {
   assert.match(adminHtml, /test-admin/);
   assert.match(adminHtml, /影像记录/);
   assert.match(adminHtml, /新建记录/);
+  assert.match(adminHtml, /href="\/"[^>]*>Our Pictures \/ 管理后台/);
+  assert.match(adminHtml, /发布影像记录。/);
   assert.match(adminHtml, /草稿|已发布/);
   assert.doesNotMatch(adminHtml, />Moments<|>New Moment<|>Log out</);
 
