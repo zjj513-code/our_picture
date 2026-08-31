@@ -4,13 +4,13 @@ import { momentStatusLabel } from "@/lib/admin-labels";
 import { requireAdminPage } from "@/lib/admin-session";
 
 type AdminIndexPageProps = {
-  searchParams: Promise<{ notice?: string }>;
+  searchParams: Promise<{ error?: string; notice?: string }>;
 };
 
 export default async function AdminIndexPage({ searchParams }: AdminIndexPageProps) {
   await requireAdminPage();
   const moments = await listAdminMoments();
-  const { notice } = await searchParams;
+  const { error, notice } = await searchParams;
 
   return (
     <>
@@ -24,6 +24,7 @@ export default async function AdminIndexPage({ searchParams }: AdminIndexPagePro
         </Link>
       </div>
 
+      {error ? <p className="admin-error">{error}</p> : null}
       {notice ? <p className="admin-notice">{notice}</p> : null}
 
       {moments.length === 0 ? (
@@ -46,9 +47,23 @@ export default async function AdminIndexPage({ searchParams }: AdminIndexPagePro
                   <td>{moment.date}</td>
                   <td>{moment.title ?? moment.location ?? "未命名"}</td>
                   <td>
-                    <span className={`admin-status admin-status--${moment.status}`}>
-                      {momentStatusLabel(moment.status)}
-                    </span>
+                    <form
+                      className="admin-status-form"
+                      action={`/admin/moments/${moment.id}/status`}
+                      method="post"
+                    >
+                      <input type="hidden" name="returnTo" value="/admin" />
+                      <select
+                        className="admin-status-select"
+                        name="status"
+                        defaultValue={moment.status}
+                        aria-label={`${moment.title ?? moment.location ?? "未命名"}的发布状态`}
+                      >
+                        <option value="draft">{momentStatusLabel("draft")}</option>
+                        <option value="published">{momentStatusLabel("published")}</option>
+                      </select>
+                      <button className="admin-button" type="submit">保存</button>
+                    </form>
                   </td>
                   <td>{moment.photoCount}</td>
                   <td>

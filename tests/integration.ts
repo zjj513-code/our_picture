@@ -36,6 +36,10 @@ import {
   getAdminForSessionToken,
 } from "@/lib/auth";
 import { adminRedirectUrl } from "@/lib/admin-session";
+import {
+  buildMomentRemoteDeletionPlan,
+  MomentRemoteDeletionError,
+} from "@/lib/aws/moment-deletion";
 
 const testDatabaseUrl = process.env.TEST_DATABASE_URL;
 if (!testDatabaseUrl) throw new Error("TEST_DATABASE_URL is required.");
@@ -237,6 +241,12 @@ async function verifyRepositoryCrud() {
   const uploadPhotoId = pending?.[0].photoId;
   assert.ok(uploadPhotoId);
   assert.equal((await getPhotoUpload(uploadMomentId, uploadPhotoId, client.db))?.status, "pending");
+  const pendingMoment = await getMomentById(uploadMomentId, client.db);
+  assert.ok(pendingMoment);
+  assert.throws(
+    () => buildMomentRemoteDeletionPlan(pendingMoment),
+    MomentRemoteDeletionError,
+  );
   assert.equal(await markPhotoProcessing(uploadMomentId, uploadPhotoId, client.db), true);
   assert.equal((await getPhotoUpload(uploadMomentId, uploadPhotoId, client.db))?.status, "processing");
   await markPhotoFailed(uploadMomentId, uploadPhotoId, "processor failed", client.db);
@@ -268,6 +278,15 @@ async function verifyRepositoryCrud() {
     ),
     { status: "ready", width: 1536, height: 1024 },
   );
+  const deletionPlan = buildMomentRemoteDeletionPlan((await getMomentById(uploadMomentId, client.db))!);
+  assert.deepEqual(deletionPlan, {
+    originalKeys: [
+      pendingPhoto.originalKey,
+      `processing-results/${uploadPhotoId}.json`,
+    ],
+    webKeys: [pendingPhoto.webKey, pendingPhoto.thumbnailKey],
+    invalidationPaths: [`/moments/${uploadMomentId}/*`],
+  });
   await deleteMoment(uploadMomentId, client.db);
 }
 
@@ -359,11 +378,11 @@ async function verifyHttpFlows(username: string, password: string) {
   const blockedPublish = await postForm(
     `${origin}/admin/moments/${createdId}/status`,
     origin,
-    { status: "published" },
+    { status: "published", returnTo: "/admin" },
     cookie,
   );
   assert.equal(blockedPublish.status, 303);
-  assert.match(blockedPublish.headers.get("location") ?? "", /error=/);
+  assert.match(blockedPublish.headers.get("location") ?? "", /\/admin\?error=/);
   assert.equal((await getMomentById(createdId, client.db))?.status, "draft");
 
   const invalidUpload = await fetch(`${origin}/admin/moments/${createdId}/uploads`, {
@@ -439,6 +458,14 @@ async function verifyHttpFlows(username: string, password: string) {
   });
   assert.equal(preview.status, 200);
   assert.match(await preview.text(), /私密预览/);
+
+  const editResponse = await fetch(`${origin}/admin/moments/${createdId}`, {
+    headers: { cookie },
+  });
+  assert.equal(editResponse.status, 200);
+  const editHtml = await editResponse.text();
+  assert.match(editHtml, /S3 原图、展示图、缩略图及 CloudFront 缓存都会被永久清除/);
+  assert.match(editHtml, />永久删除记录</);
 
   const deleted = await postForm(
     `${origin}/admin/moments/${createdId}/delete`,

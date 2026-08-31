@@ -4,7 +4,7 @@ set -euo pipefail
 region="ap-northeast-1"
 account_id="066899195278"
 repository="our-pictures-dev-web"
-image_tag="admin-home-link-20260901-01"
+image_tag="permanent-delete-20260901-01"
 image_uri="${account_id}.dkr.ecr.${region}.amazonaws.com/${repository}:${image_tag}"
 site_url="https://d1v1mg445zdh54.cloudfront.net"
 parameter_prefix="/our-pictures/dev/hosting"
@@ -97,6 +97,8 @@ docker run -d \
   --env "DATABASE_URL=${database_url}" \
   --env AWS_REGION=ap-northeast-1 \
   --env AWS_ORIGINALS_BUCKET=our-pictures-dev-066899195278-originals \
+  --env AWS_WEB_BUCKET=our-pictures-dev-066899195278-web \
+  --env AWS_CLOUDFRONT_DISTRIBUTION_ID=E27LBWNJWHPBCQ \
   --env "PHOTO_CDN_BASE_URL=${site_url}" \
   --env AWS_UPLOAD_URL_TTL_SECONDS=900 \
   "$image_uri"

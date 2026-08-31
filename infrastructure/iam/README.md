@@ -29,19 +29,19 @@ separate environment, bucket pair, and policy set.
 | --- | --- |
 | `our-pictures-cli` | `user-assume-roles-policy.json` |
 | `OurPicturesDeployerRole` | `deployer-maintenance-policy.json` after Phase 3A; `deployer-bootstrap-policy.json` only while creating resources |
-| `OurPicturesDevApplicationRole` | `application-runtime-policy.json` |
+| `OurPicturesDevApplicationRole` | `application-runtime-policy.json` plus `moment-deletion-runtime-policy.json` |
 | `OurPicturesDevImageProcessorRole` | `image-processor-runtime-policy.json` |
-| `OurPicturesDevWebHostRole` | `web-host-runtime-policy.json` plus AWS-managed `AmazonSSMManagedInstanceCore` |
+| `OurPicturesDevWebHostRole` | `web-host-runtime-policy.json`, `moment-deletion-runtime-policy.json`, plus AWS-managed `AmazonSSMManagedInstanceCore` |
 | Originals bucket | `originals-bucket-policy.json` |
 | Web bucket | rendered `web-bucket-policy.template.json` |
 | Lambda function | one S3 invoke permission described below |
 | `OurPicturesDeployerRole` hosting extension | `hosting-maintenance-policy.json` |
 
 The deployment role deliberately cannot create roles, change role trust
-policies, or attach IAM policies. An administrator must create the two runtime
-roles from the checked-in trust and permissions policies. This prevents the
-deployment role from turning an application or Lambda role into a privilege
-escalation path.
+policies, or attach IAM policies. An administrator must create and update the
+two runtime roles from the checked-in trust and permissions policies. This
+prevents the deployment role from turning an application or Lambda role into a
+privilege escalation path.
 
 The bootstrap policy has no delete permissions. CloudFront creation/list
 actions and `logs:DescribeLogGroups` must use `Resource: "*"` because AWS does
@@ -104,12 +104,20 @@ allows only that one distribution to read web derivatives.
 These policies do not grant:
 
 - access to any bucket outside the fixed development pair;
-- `s3:DeleteObject`, `s3:DeleteBucket`, Lambda deletion, or CloudFront deletion;
+- `s3:DeleteBucket`, Lambda deletion, or CloudFront distribution deletion;
 - public reads of either bucket or reads of original scans through CloudFront;
 - KMS permissions (the first development version uses S3-managed encryption);
 - RDS, ECS, Secrets Manager, Route 53, ACM, or production access;
 - IAM role/policy administration to the deployment role;
-- application access to Lambda invocation or remote-object deletion.
+- application access to Lambda invocation or objects outside the fixed Moment
+  source, processing-result, display, and thumbnail key patterns.
+
+The separate `moment-deletion-runtime-policy.json` lets the application and
+web-host roles delete only those managed Moment object patterns and invalidate
+only distribution `E27LBWNJWHPBCQ`. The development buckets currently have
+versioning disabled, so `s3:DeleteObject` permanently removes the addressed
+objects instead of creating delete markers. Final IAM policy changes remain an
+administrator-controlled operation.
 
 The hosting extension is limited to the one ECR repository, the
 `/our-pictures/dev/hosting/*` SSM parameter path, read-only EC2 state, and SSM

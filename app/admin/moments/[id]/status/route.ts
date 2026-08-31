@@ -14,8 +14,8 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
 
   try {
     const id = parseRecordId(rawId);
-    destination = `/admin/moments/${id}`;
     const formData = await request.formData();
+    destination = formData.get("returnTo") === "/admin" ? "/admin" : `/admin/moments/${id}`;
     const status = formData.get("status");
     if (status !== "draft" && status !== "published") {
       throw new AdminInputError("发布状态无效。");
@@ -24,7 +24,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     if (!updated) throw new AdminInputError("找不到这条记录。");
     return redirectWithNotice(
       request,
-      `/admin/moments/${id}`,
+      destination,
       "notice",
       status === "published" ? "记录已发布。" : "记录已转回草稿。",
     );

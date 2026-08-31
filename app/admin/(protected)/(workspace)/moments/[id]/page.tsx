@@ -101,15 +101,15 @@ export default async function EditMomentPage({ params, searchParams }: EditMomen
       <section className="admin-section">
         <h2 className="admin-section-title">删除记录</h2>
         <p className="admin-copy">
-          这里只会删除数据库中的记录和照片信息，本地文件与远程 S3 对象会保留。
+          删除后，数据库记录、已上传的 S3 原图、展示图、缩略图及 CloudFront 缓存都会被永久清除，无法恢复。
         </p>
         <form action={`/admin/moments/${moment.id}/delete`} method="post">
           <label className="admin-confirm">
             <input type="checkbox" name="confirm" value="yes" required />
-            我明白数据库中的删除操作无法撤销。
+            我明白记录和已上传的远程图片都会被永久删除。
           </label>
           <button className="admin-button admin-button--danger" type="submit">
-            删除记录
+            永久删除记录
           </button>
         </form>
       </section>

@@ -162,17 +162,20 @@
   text-transform: uppercase;
 }
 
-.admin-status {
-  display: inline-block;
-  min-width: 66px;
-  color: #5f5f5a;
-  font-size: 0.7rem;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
+.admin-status-form {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
-.admin-status--published {
-  color: #3d654a;
+.admin-status-select {
+  min-height: 36px;
+  padding: 7px 28px 7px 10px;
+  border: 1px solid #bdbdb7;
+  border-radius: 2px;
+  background: #fff;
+  color: #292927;
+  font: inherit;
 }
 
 .admin-actions {

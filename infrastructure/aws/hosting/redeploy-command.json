@@ -1,7 +1,7 @@
 {
   "commands": [
     "set -euo pipefail",
-    "archive=$(aws ssm get-parameter --region ap-northeast-1 --name /our-pictures/dev/hosting/user-data-gzip-base64 --query 'Parameter.Value' --output text)",
+    "archive=$(aws ssm get-parameter --region ap-northeast-1 --name /our-pictures/dev/hosting/user-data-gzip-base64 --with-decryption --query 'Parameter.Value' --output text)",
     "printf '%s' \"$archive\" | base64 --decode | gzip --decompress > /tmp/our-pictures-user-data.sh",
     "chmod 700 /tmp/our-pictures-user-data.sh",
     "bash /tmp/our-pictures-user-data.sh"
