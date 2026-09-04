@@ -9,6 +9,7 @@ type TimelineItem = {
 
 type TimelineOverlayProps = {
   items: TimelineItem[];
+  onSelectMoment?: (id: string) => void;
 };
 
 type TimelineGroup = {
@@ -24,7 +25,7 @@ const monthFormatter = new Intl.DateTimeFormat("en", {
   timeZone: "UTC",
 });
 
-export function TimelineOverlay({ items }: TimelineOverlayProps) {
+export function TimelineOverlay({ items, onSelectMoment }: TimelineOverlayProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [activeId, setActiveId] = useState(items[0]?.id ?? "");
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -85,10 +86,13 @@ export function TimelineOverlay({ items }: TimelineOverlayProps) {
     const reduceMotion = window.matchMedia(
       "(prefers-reduced-motion: reduce)",
     ).matches;
-    target.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth" });
-    window.history.pushState(null, "", `#${item.id}`);
+    onSelectMoment?.(item.id);
     setActiveId(item.id);
     setIsOpen(false);
+    window.setTimeout(() => {
+      target.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth" });
+      window.history.pushState(null, "", `#${item.id}`);
+    }, 0);
   };
 
   return (

@@ -5,10 +5,7 @@
       "Sid": "AssumeOnlyOurPicturesDevelopmentRoles",
       "Effect": "Allow",
       "Action": "sts:AssumeRole",
-      "Resource": [
-        "arn:aws:iam::066899195278:role/OurPicturesDeployerRole",
-        "arn:aws:iam::066899195278:role/OurPicturesDevApplicationRole"
-      ]
+      "Resource": "arn:aws:iam::066899195278:role/OurPicturesDeployerRole"
     }
   ]
 }

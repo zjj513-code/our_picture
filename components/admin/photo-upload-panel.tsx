@@ -1,7 +1,6 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { useRouter } from "next/navigation";
 import { photoProcessingErrorLabel } from "@/lib/admin-labels";
 
 type UploadStatus =
@@ -43,8 +42,13 @@ const maxBatchSize = 30;
 const maxBytes = 250 * 1024 * 1024;
 const allowedTypes = new Set(["image/jpeg", "image/png", "image/webp", "image/tiff"]);
 
-export function PhotoUploadPanel({ momentId }: { momentId: string }) {
-  const router = useRouter();
+export function PhotoUploadPanel({
+  momentId,
+  onChanged,
+}: {
+  momentId: string;
+  onChanged: () => void | Promise<void>;
+}) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [items, setItems] = useState<UploadItem[]>([]);
   const [working, setWorking] = useState(false);
@@ -94,7 +98,7 @@ export function PhotoUploadPanel({ momentId }: { momentId: string }) {
       if (metadata.length === 0) return;
 
       const initialized = await requestJson<InitResponse>(
-        `/admin/moments/${momentId}/uploads`,
+        `/api/admin/moments/${momentId}/uploads`,
         { files: metadata },
       );
       const ready: UploadItem[] = [];
@@ -132,7 +136,7 @@ export function PhotoUploadPanel({ momentId }: { momentId: string }) {
       ));
     } finally {
       setWorking(false);
-      router.refresh();
+      await onChanged();
     }
   };
 
@@ -143,11 +147,11 @@ export function PhotoUploadPanel({ momentId }: { momentId: string }) {
       await putFile(item.file, item.upload, (progress) => patchItem(item.clientId, { progress }));
       patchItem(item.clientId, { status: "verifying", progress: 100 });
       await requestJson(
-        `/admin/moments/${momentId}/uploads/${item.photoId}/complete`,
+        `/api/admin/moments/${momentId}/uploads/${item.photoId}/complete`,
         {},
       );
       patchItem(item.clientId, { status: "processing", progress: 100 });
-      router.refresh();
+      await onChanged();
       return true;
     } catch (error) {
       patchItem(item.clientId, { status: "failed", error: errorMessage(error) });
@@ -161,7 +165,7 @@ export function PhotoUploadPanel({ momentId }: { momentId: string }) {
       if (attempt > 0) await delay(2_000);
       const result = await requestJson<{
         photos: Array<{ photoId: string; status: "pending" | "processing" | "ready" | "failed"; error?: string }>;
-      }>(`/admin/moments/${momentId}/photos/reconcile`, {});
+      }>(`/api/admin/moments/${momentId}/photos/reconcile`, {});
       for (const photo of result.photos) {
         const clientId = waiting.get(photo.photoId);
         if (!clientId) continue;
@@ -176,7 +180,7 @@ export function PhotoUploadPanel({ momentId }: { momentId: string }) {
           waiting.delete(photo.photoId);
         }
       }
-      router.refresh();
+      await onChanged();
     }
   };
 
@@ -190,7 +194,7 @@ export function PhotoUploadPanel({ momentId }: { momentId: string }) {
       let upload: SignedUpload;
       if (photoId) {
         const retried = await requestJson<{ photoId: string; upload?: SignedUpload; status?: "processing" | "ready" }>(
-          `/admin/moments/${momentId}/uploads/${photoId}/retry`,
+          `/api/admin/moments/${momentId}/uploads/${photoId}/retry`,
           {},
         );
         if (retried.status) {
@@ -203,7 +207,7 @@ export function PhotoUploadPanel({ momentId }: { momentId: string }) {
         patchItem(item.clientId, { status: "hashing", error: undefined });
         const checksum = item.checksum ?? await sha256Base64(item.file);
         const initialized = await requestJson<InitResponse>(
-          `/admin/moments/${momentId}/uploads`,
+          `/api/admin/moments/${momentId}/uploads`,
           { files: [{
             clientId: item.clientId,
             filename: item.file.name,
@@ -226,7 +230,7 @@ export function PhotoUploadPanel({ momentId }: { momentId: string }) {
       patchItem(item.clientId, { status: "failed", error: errorMessage(error) });
     } finally {
       setWorking(false);
-      router.refresh();
+      await onChanged();
     }
   };
 

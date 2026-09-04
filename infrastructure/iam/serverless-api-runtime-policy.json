@@ -1,0 +1,28 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "Table",
+      "Effect": "Allow",
+      "Action": ["dynamodb:BatchWriteItem", "dynamodb:DeleteItem", "dynamodb:GetItem", "dynamodb:PutItem", "dynamodb:Query", "dynamodb:Scan", "dynamodb:UpdateItem"],
+      "Resource": "arn:aws:dynamodb:ap-northeast-1:066899195278:table/our-pictures-dev"
+    },
+    {
+      "Sid": "UploadsAndResults",
+      "Effect": "Allow",
+      "Action": ["s3:GetObject", "s3:GetObjectAttributes", "s3:GetObjectVersion", "s3:GetObjectVersionAttributes", "s3:PutObject", "s3:DeleteObject"],
+      "Resource": [
+        "arn:aws:s3:::our-pictures-dev-066899195278-originals/originals/moments/*/photos/*/source.*",
+        "arn:aws:s3:::our-pictures-dev-066899195278-originals/processing-results/*.json",
+        "arn:aws:s3:::our-pictures-dev-066899195278-web/moments/*/photos/*",
+        "arn:aws:s3:::our-pictures-dev-066899195278-web/site-data.json"
+      ]
+    },
+    {
+      "Sid": "Logs",
+      "Effect": "Allow",
+      "Action": ["logs:CreateLogStream", "logs:PutLogEvents"],
+      "Resource": "arn:aws:logs:ap-northeast-1:066899195278:log-group:/aws/lambda/our-pictures-dev-api:*"
+    }
+  ]
+}

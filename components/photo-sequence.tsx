@@ -30,7 +30,16 @@ export function PhotoSequence({ photos, priority = false }: PhotoSequenceProps) 
           data-spread={spread.kind}
         >
           {spread.photos.map((photo, photoIndex) => (
-            <figure key={photo.id} className="photo-frame">
+            <figure
+              key={photo.id}
+              className={`photo-frame${
+                photo.width !== null &&
+                photo.height !== null &&
+                photo.height > photo.width
+                  ? " photo-frame--portrait"
+                  : ""
+              }`}
+            >
               <picture>
                 {photo.thumbnailUrl ? (
                   <source
