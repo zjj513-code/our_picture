@@ -243,8 +243,8 @@ export function PhotoUploadPanel({
   return (
     <div className="admin-upload-panel">
       <p className="admin-copy">
-        每次最多上传 30 张 JPEG、PNG、WebP 或 TIFF 原图，文件会直接进入私有 S3
-        存储；单张最大 250 MiB。
+        每次最多选择 30 张照片，支持 JPEG、PNG、WebP 和 TIFF；单张最大 250 MiB。
+        上传完成后会自动处理。
       </p>
       <div className="admin-upload-actions">
         <label className="admin-link-button admin-upload-picker">

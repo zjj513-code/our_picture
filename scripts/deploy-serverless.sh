@@ -11,7 +11,7 @@ api_name="our-pictures-dev-api"
 web_bucket="our-pictures-dev-066899195278-web"
 originals_bucket="our-pictures-dev-066899195278-originals"
 distribution="E27LBWNJWHPBCQ"
-public_origin="https://d1v1mg445zdh54.cloudfront.net"
+public_origin="https://z.ziwu.win"
 repo_root="$(cd "$(dirname "$0")/.." && pwd)"
 task_dir="$(mktemp -d)"
 trap 'rm -r "$task_dir"' EXIT

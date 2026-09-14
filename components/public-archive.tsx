@@ -41,7 +41,10 @@ export function PublicArchive() {
         />
       ) : null}
       <main id="photography-archive" className="archive-shell">
-        <h1 className="sr-only">Our Pictures</h1>
+        <header className="archive-masthead">
+          <h1>Our Pictures<span>A photographic journal</span></h1>
+          <span className="archive-edition">{moments ? `${String(moments.length).padStart(2, "0")} MOMENTS` : "ARCHIVE"}</span>
+        </header>
         {failed ? (
           <p className="archive-empty">Unable to load the archive.</p>
         ) : moments === null ? (
@@ -68,6 +71,7 @@ export function PublicArchive() {
         ) : (
           <p className="archive-empty">No moments have been published yet.</p>
         )}
+        <footer className="archive-footer"><span>Our Pictures · Collected moments</span><a href="#photography-archive">BACK TO TOP ↑</a></footer>
       </main>
     </>
   );

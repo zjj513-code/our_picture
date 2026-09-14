@@ -26,6 +26,12 @@ published Moments and ready Photos.
 
 ## Authentication
 
+The public/admin origin is `https://z.ziwu.win`. The application Lambda checks
+the request `Origin` against `PUBLIC_ORIGIN`; the environment variable was updated
+in the AWS console after the custom-domain cutover. See the
+[domain configuration record](operations/2026-09-10-custom-domain.md) for the
+verified behavior and the deployment-script setting that still needs synchronization.
+
 The migrated administrator row retains the original Argon2 password hash. Successful
 login stores only a SHA-256 hash of a random session token in DynamoDB. Sessions expire
 through both application checks and DynamoDB TTL.
